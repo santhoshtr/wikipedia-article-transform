@@ -1,7 +1,7 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
 use std::io::{self, Write};
-use wikipedia_article_transform::{get_text, ArticleFormat};
+use wikipedia_article_transform::{get_text, strip_references, ArticleFormat};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Extract plain text from Wikipedia HTML")]
@@ -23,6 +23,9 @@ enum Command {
         /// Output format
         #[arg(short, long, default_value = "plain")]
         format: OutputFormat,
+        /// Include citation references inline and as a reference list at the end
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        include_references: bool,
     },
 }
 
@@ -45,17 +48,22 @@ async fn main() -> anyhow::Result<()> {
             language,
             title,
             format,
+            include_references,
         } => {
-            let segments = get_text(&language, &title).await.with_context(|| {
+            let mut items = get_text(&language, &title).await.with_context(|| {
                 format!("Failed to fetch '{title}' from {language}.wikipedia.org")
             })?;
+
+            if !include_references {
+                items = strip_references(items);
+            }
 
             let stdout = io::stdout();
             let mut handle = stdout.lock();
             let output = match format {
-                OutputFormat::Plain => segments.format_plain(),
-                OutputFormat::Json => segments.format_json()?,
-                OutputFormat::Markdown => segments.format_markdown(),
+                OutputFormat::Plain => items.format_plain(),
+                OutputFormat::Json => items.format_json()?,
+                OutputFormat::Markdown => items.format_markdown(),
             };
             writeln!(handle, "{output}")?;
         }

@@ -40,6 +40,8 @@
 pub mod formatters;
 pub use formatters::ArticleFormat;
 
+use std::collections::HashMap;
+
 use serde::Serialize;
 use tree_sitter::{Node, Parser};
 use tree_sitter_html::LANGUAGE;
@@ -47,7 +49,7 @@ use tree_sitter_html::LANGUAGE;
 /// An inline content node within a paragraph.
 ///
 /// Captures the inline structure of paragraph text so formatters can render
-/// bold, italic, and link markup.
+/// bold, italic, link, and citation reference markup.
 #[derive(Debug, Clone)]
 pub enum InlineNode {
     /// Plain text.
@@ -58,6 +60,11 @@ pub enum InlineNode {
     Italic(String),
     /// A hyperlink (`<a href="...">`).
     Link { text: String, href: String },
+    /// A citation reference (`<sup class="mw-ref reference">`).
+    ///
+    /// `label` is the display number (e.g. `"1"`), `note_id` is the fragment
+    /// identifying the entry in the reference list (e.g. `"cite_note-Foo-1"`).
+    Ref { label: String, note_id: String },
 }
 
 /// An image extracted from a `<figure>` block in a Wikipedia article.
@@ -81,21 +88,29 @@ pub struct ImageSegment {
 /// A single item extracted from a Wikipedia article, in document order.
 ///
 /// Paragraphs and images are interleaved as they appear in the source HTML,
-/// so formatters can reproduce the original reading order.
+/// so formatters can reproduce the original reading order. If references were
+/// found, a single [`ArticleItem::References`] item is appended last.
 #[derive(Debug, Clone)]
 pub enum ArticleItem {
     /// A paragraph extracted from a `<p>` element.
     Paragraph(TextSegment),
     /// An image extracted from a `<figure>` element.
     Image(ImageSegment),
+    /// All citation references collected from `<ol class="references">` lists.
+    ///
+    /// Keyed by the fragment id (e.g. `"cite_note-Foo-1"`), valued by the
+    /// full plain-text citation string.
+    References(HashMap<String, String>),
 }
 
 impl InlineNode {
     /// Returns the plain text content, stripping any markup.
+    /// Returns an empty string for `Ref` nodes — citations are not prose text.
     pub fn plain_text(&self) -> &str {
         match self {
             InlineNode::Text(s) | InlineNode::Bold(s) | InlineNode::Italic(s) => s,
             InlineNode::Link { text, .. } => text,
+            InlineNode::Ref { .. } => "",
         }
     }
 }
@@ -149,6 +164,9 @@ pub struct WikiPage {
     current_sections: Vec<SectionInfo>,
     /// Base URL used to resolve relative hrefs, e.g. `https://en.wikipedia.org/wiki/`.
     base_url: Option<String>,
+    /// Citation references collected by `extract_references()`.
+    /// Keyed by note id (e.g. `"cite_note-Foo-1"`), valued by plain-text citation.
+    references: HashMap<String, String>,
 }
 
 impl WikiPage {
@@ -162,6 +180,7 @@ impl WikiPage {
             items: Vec::new(),
             current_sections: Vec::new(),
             base_url: None,
+            references: HashMap::new(),
         })
     }
 
@@ -203,6 +222,9 @@ impl WikiPage {
 
     /// Parses `html` and returns one [`ArticleItem`] per paragraph or image, in document order.
     ///
+    /// If any `<ol class="references">` lists are found, a final
+    /// [`ArticleItem::References`] item is appended containing all citations.
+    ///
     /// The parser state is reset on each call, so the same `WikiPage` can be
     /// reused safely across multiple articles.
     ///
@@ -212,12 +234,17 @@ impl WikiPage {
     pub fn extract_text(&mut self, html: &str) -> anyhow::Result<Vec<ArticleItem>> {
         self.items.clear();
         self.current_sections.clear();
+        self.references.clear();
         let tree = self
             .parser
             .parse(html, None)
             .ok_or_else(|| anyhow::anyhow!("Failed to parse HTML"))?;
         let source = html.as_bytes();
+        self.extract_references(&tree.root_node(), source);
         self.walk_and_collect(&tree.root_node(), source, false);
+        if !self.references.is_empty() {
+            self.items.push(ArticleItem::References(self.references.clone()));
+        }
         Ok(self.items.clone())
     }
 
@@ -232,7 +259,7 @@ impl WikiPage {
                     let t = seg.text.trim();
                     if t.is_empty() { None } else { Some(t) }
                 }
-                ArticleItem::Image(_) => None,
+                ArticleItem::Image(_) | ArticleItem::References(_) => None,
             })
             .collect::<Vec<_>>()
             .join("\n\n");
@@ -294,6 +321,145 @@ impl WikiPage {
             .last()
             .map(|s| s.level)
             .unwrap_or(0)
+    }
+
+    /// Pre-scan the parse tree for `<ol class="mw-references references">` elements
+    /// and populate `self.references` with `note_id → citation_text` pairs.
+    ///
+    /// This runs before `walk_and_collect` so that inline `<sup>` nodes encountered
+    /// during the main walk can be cross-referenced.
+    fn extract_references(&mut self, node: &Node, source: &[u8]) {
+        match node.kind() {
+            "element" => {
+                if let Some((tag, attrs)) = self.parse_element(node, source) {
+                    let class = attrs.iter()
+                        .find(|(k, _)| k == "class")
+                        .map(|(_, v)| v.as_str())
+                        .unwrap_or("");
+                    let classes: Vec<&str> = class.split_whitespace().collect();
+
+                    // Found a reference list: collect its <li> children
+                    if tag == "ol" && classes.contains(&"references") {
+                        for child in node.children(&mut node.walk()) {
+                            if child.kind() != "element" {
+                                continue;
+                            }
+                            if let Some((child_tag, child_attrs)) = self.parse_element(&child, source) {
+                                if child_tag != "li" {
+                                    continue;
+                                }
+                                let note_id = child_attrs.iter()
+                                    .find(|(k, _)| k == "id")
+                                    .map(|(_, v)| v.clone())
+                                    .unwrap_or_default();
+                                if note_id.is_empty() {
+                                    continue;
+                                }
+                                // Find the <span class="mw-reference-text reference-text">
+                                let citation = self.find_reference_text(&child, source);
+                                if !citation.is_empty() {
+                                    self.references.insert(note_id, citation);
+                                }
+                            }
+                        }
+                        return; // don't recurse into the ol further
+                    }
+
+                    // Recurse into other elements looking for more reference lists
+                    for child in node.children(&mut node.walk()) {
+                        self.extract_references(&child, source);
+                    }
+                }
+            }
+            _ => {
+                for child in node.children(&mut node.walk()) {
+                    self.extract_references(&child, source);
+                }
+            }
+        }
+    }
+
+    /// Find and return the plain text of the `<span class="mw-reference-text">` inside a `<li>`.
+    fn find_reference_text(&self, li_node: &Node, source: &[u8]) -> String {
+        for child in li_node.children(&mut li_node.walk()) {
+            if child.kind() != "element" {
+                continue;
+            }
+            if let Some((tag, attrs)) = self.parse_element(&child, source) {
+                let class = attrs.iter()
+                    .find(|(k, _)| k == "class")
+                    .map(|(_, v)| v.as_str())
+                    .unwrap_or("");
+                if tag == "span" && class.split_whitespace().any(|c| c == "reference-text") {
+                    return self.extract_text_from_element(&child, source);
+                }
+                // Recurse — the span may be nested
+                let found = self.find_reference_text(&child, source);
+                if !found.is_empty() {
+                    return found;
+                }
+            }
+        }
+        String::new()
+    }
+
+    /// Extract an [`InlineNode::Ref`] from a `<sup class="mw-ref reference">` node.
+    ///
+    /// Finds the inner `<a href="...#note_id">` for the note_id and the
+    /// `<span class="mw-reflink-text">` for the display label.
+    fn extract_inline_ref(&self, sup_node: &Node, source: &[u8]) -> Option<InlineNode> {
+        let mut note_id = String::new();
+        let mut label = String::new();
+
+        self.find_ref_parts(sup_node, source, &mut note_id, &mut label);
+
+        if note_id.is_empty() || label.is_empty() {
+            return None;
+        }
+        Some(InlineNode::Ref { label, note_id })
+    }
+
+    /// Recursively walk a `<sup>` subtree collecting the anchor fragment (note_id)
+    /// and the mw-reflink-text content (label).
+    fn find_ref_parts(&self, node: &Node, source: &[u8], note_id: &mut String, label: &mut String) {
+        for child in node.children(&mut node.walk()) {
+            if child.kind() != "element" {
+                continue;
+            }
+            if let Some((tag, attrs)) = self.parse_element(&child, source) {
+                match tag.as_str() {
+                    "a" => {
+                        if note_id.is_empty() {
+                            let href = attrs.iter()
+                                .find(|(k, _)| k == "href")
+                                .map(|(_, v)| v.as_str())
+                                .unwrap_or_default();
+                            // href is like "./Article#cite_note-Foo-1" — take the fragment
+                            if let Some(fragment) = href.rsplit_once('#') {
+                                *note_id = fragment.1.to_string();
+                            }
+                        }
+                        self.find_ref_parts(&child, source, note_id, label);
+                    }
+                    "span" => {
+                        let class = attrs.iter()
+                            .find(|(k, _)| k == "class")
+                            .map(|(_, v)| v.as_str())
+                            .unwrap_or("");
+                        if class.split_whitespace().any(|c| c == "mw-reflink-text") {
+                            // Inner text is like "[1]" — strip the brackets
+                            let raw = self.extract_text_from_element(&child, source);
+                            *label = raw.trim_matches(|c: char| c == '[' || c == ']' || c.is_whitespace()).to_string();
+                        } else {
+                            self.find_ref_parts(&child, source, note_id, label);
+                        }
+                    }
+                    _ => {
+                        self.find_ref_parts(&child, source, note_id, label);
+                    }
+                }
+            }
+        }
     }
 
     /// Push an inline node onto the last text segment, also updating the plain text.
@@ -370,6 +536,24 @@ impl WikiPage {
                         return;
                     }
 
+                    let class_attr = attributes.iter()
+                        .find(|(k, _)| k == "class")
+                        .map(|(_, v)| v.as_str())
+                        .unwrap_or("");
+
+                    // Handle citation refs before the class exclusion check:
+                    // <sup class="mw-ref reference"> contains "reference" which would
+                    // otherwise be excluded, but these are inline markers we want to keep.
+                    if inside_paragraph
+                        && tag_name == "sup"
+                        && class_attr.split_whitespace().any(|c| c == "mw-ref")
+                    {
+                        if let Some(r) = self.extract_inline_ref(node, source) {
+                            self.push_inline(r);
+                        }
+                        return;
+                    }
+
                     const EXCLUDED_CLASSES: &[&str] = &[
                         "shortdescription",
                         "hatnote",
@@ -379,11 +563,8 @@ impl WikiPage {
                         "noprint",
                         "reflist",
                         "citation",
+                        "mw-references",
                     ];
-                    let class_attr = attributes.iter()
-                        .find(|(k, _)| k == "class")
-                        .map(|(_, v)| v.as_str())
-                        .unwrap_or("");
                     if EXCLUDED_CLASSES.iter().any(|c| {
                         class_attr.split_whitespace().any(|cls| cls == *c)
                     }) {
@@ -600,6 +781,28 @@ impl Default for WikiPage {
     fn default() -> Self {
         Self::new().expect("Failed to initialise tree-sitter HTML parser")
     }
+}
+
+/// Remove all reference-related content from a list of [`ArticleItem`]s.
+///
+/// Drops the [`ArticleItem::References`] item and removes [`InlineNode::Ref`]
+/// nodes from every paragraph's content (also rebuilds the plain text).
+/// Call this when `--include-references=false` is requested.
+pub fn strip_references(items: Vec<ArticleItem>) -> Vec<ArticleItem> {
+    items.into_iter().filter_map(|item| match item {
+        ArticleItem::References(_) => None,
+        ArticleItem::Paragraph(mut seg) => {
+            seg.content.retain(|n| !matches!(n, InlineNode::Ref { .. }));
+            // Rebuild plain text without the ref labels
+            seg.text = seg.content.iter()
+                .map(|n| n.plain_text())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
+            Some(ArticleItem::Paragraph(seg))
+        }
+        other => Some(other),
+    }).collect()
 }
 
 /// Fetch a Wikipedia article by language code and title, returning article items in document order.
@@ -918,7 +1121,8 @@ mod tests {
         </figure>"#;
         let items = extract(html);
         let out = items.format_markdown();
-        assert!(out.contains("![Alt text](https://upload.wikimedia.org/foo.jpg)"));
+        // caption is used as alt text intentionally
+        assert!(out.contains("![The caption.](https://upload.wikimedia.org/foo.jpg)"));
         assert!(out.contains("_The caption._"));
     }
 
@@ -930,7 +1134,7 @@ mod tests {
         </figure>"#;
         let items = extract(html);
         let out = items.format_markdown();
-        assert!(out.contains("![Bar](https://upload.wikimedia.org/bar.png)"));
+        assert!(out.contains("![](https://upload.wikimedia.org/bar.png)"));
         // no caption line when caption is empty
         assert!(!out.contains("__"));
     }
@@ -961,5 +1165,108 @@ mod tests {
         assert_eq!(v["sections"][0]["images"][0]["alt"], "Alt text");
         assert_eq!(v["sections"][0]["images"][0]["src"], "https://upload.wikimedia.org/foo.jpg");
         assert_eq!(v["sections"][0]["images"][0]["caption"], "The caption.");
+    }
+
+    // ── Reference tests ─────────────────────────────────────────────────────
+
+    fn ref_html() -> &'static str {
+        r#"<p id="p1">Some text.<sup class="mw-ref reference" typeof="mw:Extension/ref"
+            ><a href="./Article#cite_note-Foo-1"><span class="mw-reflink-text">[1]</span></a
+            ></sup> More text.<sup class="mw-ref reference" typeof="mw:Extension/ref"
+            ><a href="./Article#cite_note-Bar-2"><span class="mw-reflink-text">[2]</span></a
+            ></sup></p>
+        <ol class="mw-references references">
+            <li id="cite_note-Foo-1" data-mw-footnote-number="1">
+                <span class="mw-cite-backlink"><a href="./Article#cite_ref-Foo_1-0">↑</a></span>
+                <span id="mw-reference-text-cite_note-Foo-1" class="mw-reference-text reference-text">Author A. <i>Title One</i>. Publisher, 2020.</span>
+            </li>
+            <li id="cite_note-Bar-2" data-mw-footnote-number="2">
+                <span class="mw-cite-backlink"><a href="./Article#cite_ref-Bar_2-0">↑</a></span>
+                <span id="mw-reference-text-cite_note-Bar-2" class="mw-reference-text reference-text">Author B. Title Two. Journal, 2021.</span>
+            </li>
+        </ol>"#
+    }
+
+    #[test]
+    fn test_ref_inline_nodes() {
+        let items = extract(ref_html());
+        let segs = paragraphs(&items);
+        assert_eq!(segs.len(), 1);
+        // content: Text, Ref[1], Text, Ref[2]
+        assert!(matches!(&segs[0].content[0], InlineNode::Text(s) if s.contains("Some text")));
+        assert!(matches!(&segs[0].content[1], InlineNode::Ref { label, note_id }
+            if label == "1" && note_id == "cite_note-Foo-1"));
+        assert!(matches!(&segs[0].content[3], InlineNode::Ref { label, note_id }
+            if label == "2" && note_id == "cite_note-Bar-2"));
+    }
+
+    #[test]
+    fn test_ref_plain_text_excludes_label() {
+        // plain_text() on Ref returns "" so the ref label is not in seg.text
+        let items = extract(ref_html());
+        let segs = paragraphs(&items);
+        assert!(!segs[0].text.contains('['));
+        assert!(segs[0].text.contains("Some text"));
+        assert!(segs[0].text.contains("More text"));
+    }
+
+    #[test]
+    fn test_ref_references_item_appended() {
+        let items = extract(ref_html());
+        let refs = items.iter().find_map(|i| {
+            if let ArticleItem::References(r) = i { Some(r) } else { None }
+        });
+        assert!(refs.is_some());
+        let refs = refs.unwrap();
+        assert_eq!(refs.len(), 2);
+        assert!(refs["cite_note-Foo-1"].contains("Title One"));
+        assert!(refs["cite_note-Bar-2"].contains("Title Two"));
+    }
+
+    #[test]
+    fn test_ref_no_refs_no_item() {
+        let items = extract("<p>No citations here.</p>");
+        assert!(!items.iter().any(|i| matches!(i, ArticleItem::References(_))));
+    }
+
+    #[test]
+    fn test_ref_markdown_inline_and_list() {
+        let items = extract(ref_html());
+        let out = items.format_markdown();
+        // Inline labels appear attached to surrounding text
+        assert!(out.contains("[1]"), "inline [1] missing");
+        assert!(out.contains("[2]"), "inline [2] missing");
+        // Reference definitions at the bottom
+        assert!(out.contains("## References"), "References heading missing");
+        assert!(out.contains("[1]: "), "[1]: definition missing");
+        assert!(out.contains("Title One"), "citation text missing");
+        assert!(out.contains("[2]: "), "[2]: definition missing");
+        assert!(out.contains("Title Two"), "citation text missing");
+        // Definitions must appear after body text
+        assert!(out.find("Some text").unwrap() < out.find("## References").unwrap());
+    }
+
+    #[test]
+    fn test_ref_json_references_key() {
+        let items = extract(ref_html());
+        let json_str = items.format_json().unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+        assert!(v["references"].is_object(), "references key missing");
+        assert!(v["references"]["cite_note-Foo-1"].as_str().unwrap().contains("Title One"));
+        assert!(v["references"]["cite_note-Bar-2"].as_str().unwrap().contains("Title Two"));
+    }
+
+    #[test]
+    fn test_strip_references() {
+        let items = extract(ref_html());
+        let stripped = strip_references(items);
+        // No References item
+        assert!(!stripped.iter().any(|i| matches!(i, ArticleItem::References(_))));
+        // No Ref inline nodes in paragraphs
+        let segs = paragraphs(&stripped);
+        for seg in segs {
+            assert!(!seg.content.iter().any(|n| matches!(n, InlineNode::Ref { .. })));
+            assert!(!seg.text.contains('['));
+        }
     }
 }

@@ -2,8 +2,10 @@
 //!
 //! Provides the [`ArticleFormat`] trait with three output formats:
 //! - [`ArticleFormat::format_plain`] — plain text with heading lines and image placeholders
-//! - [`ArticleFormat::format_json`] — semantic JSON section tree with images per section
-//! - [`ArticleFormat::format_markdown`] — Markdown with inline formatting and `![alt](src)` images
+//! - [`ArticleFormat::format_json`] — semantic JSON section tree with images and references
+//! - [`ArticleFormat::format_markdown`] — Markdown with inline formatting, images, and footnotes
+
+use std::collections::HashMap;
 
 use crate::{ArticleItem, ImageSegment, InlineNode};
 use serde::Serialize;
@@ -12,9 +14,8 @@ use serde::Serialize;
 pub trait ArticleFormat {
     /// Format as plain text.
     ///
-    /// Section headings are emitted as `#`/`##`/`###` lines matching heading depth,
-    /// only when the section changes. Paragraphs are separated by blank lines.
-    /// Images are rendered as `[Image: alt text]` followed by the caption.
+    /// Section headings are emitted as `#`/`##`/`###` lines. Images are rendered
+    /// as `[Image: alt text]` followed by caption. References are omitted.
     fn format_plain(&self) -> String;
 
     /// Format as a semantic JSON section tree.
@@ -22,25 +23,19 @@ pub trait ArticleFormat {
     /// Structure:
     /// ```json
     /// {
-    ///   "intro": ["paragraphs before first heading"],
-    ///   "intro_images": [{"src":"...","alt":"...","caption":"..."}],
-    ///   "sections": [
-    ///     {
-    ///       "heading": "...", "level": 2,
-    ///       "paragraphs": ["..."],
-    ///       "images": [{"src":"...","alt":"...","caption":"..."}],
-    ///       "subsections": [...]
-    ///     }
-    ///   ]
+    ///   "intro": ["..."], "intro_images": [...],
+    ///   "sections": [{"heading":"...","level":2,"paragraphs":[...],"images":[...],"subsections":[...]}],
+    ///   "references": {"cite_note-Foo-1": "Full citation text..."}
     /// }
     /// ```
     fn format_json(&self) -> anyhow::Result<String>;
 
     /// Format as Markdown.
     ///
-    /// Section headings become `##`/`###` etc. Inline content is rendered:
-    /// bold → `**text**`, italic → `_text_`, links → `[text](href)`.
-    /// Images become `![alt](src)` with an optional italic caption line below.
+    /// Inline: bold → `**text**`, italic → `_text_`, links → `[text](href)`,
+    /// citation refs → `[N]`. Images → `![alt](src)` with italic caption.
+    /// A `## References` section with `[N]: citation` definitions is appended
+    /// when references are present.
     fn format_markdown(&self) -> String;
 }
 
@@ -48,11 +43,9 @@ impl ArticleFormat for Vec<ArticleItem> {
     fn format_plain(&self) -> String {
         format_plain(self)
     }
-
     fn format_json(&self) -> anyhow::Result<String> {
         format_json(self)
     }
-
     fn format_markdown(&self) -> String {
         format_markdown(self)
     }
@@ -62,11 +55,9 @@ impl ArticleFormat for &[ArticleItem] {
     fn format_plain(&self) -> String {
         format_plain(self)
     }
-
     fn format_json(&self) -> anyhow::Result<String> {
         format_json(self)
     }
-
     fn format_markdown(&self) -> String {
         format_markdown(self)
     }
@@ -122,6 +113,7 @@ fn format_plain(items: &[ArticleItem]) -> String {
                     out.push('\n');
                 }
             }
+            ArticleItem::References(_) => {} // omit from plain output
         }
     }
 
@@ -129,10 +121,6 @@ fn format_plain(items: &[ArticleItem]) -> String {
 }
 
 fn format_json(items: &[ArticleItem]) -> anyhow::Result<String> {
-    format_json_typed(items)
-}
-
-fn format_json_typed(items: &[ArticleItem]) -> anyhow::Result<String> {
     #[derive(Serialize)]
     struct ImageEntry {
         src: String,
@@ -164,12 +152,14 @@ fn format_json_typed(items: &[ArticleItem]) -> anyhow::Result<String> {
         intro: Vec<String>,
         intro_images: Vec<ImageEntry>,
         sections: Vec<Section>,
+        references: HashMap<String, String>,
     }
 
     let mut tree = ArticleTree {
         intro: Vec::new(),
         intro_images: Vec::new(),
         sections: Vec::new(),
+        references: HashMap::new(),
     };
 
     for item in items {
@@ -235,10 +225,26 @@ fn format_json_typed(items: &[ArticleItem]) -> anyhow::Result<String> {
                     }
                 }
             }
+            ArticleItem::References(refs) => {
+                tree.references = refs.clone();
+            }
         }
     }
 
     Ok(serde_json::to_string_pretty(&tree)?)
+}
+
+/// Sort a reference map by the trailing integer in the note_id (`cite_note-Name-N`).
+fn sorted_refs(refs: &HashMap<String, String>) -> Vec<(&String, &String)> {
+    let mut entries: Vec<(&String, &String)> = refs.iter().collect();
+    entries.sort_by_key(|(note_id, _)| {
+        note_id
+            .rsplit('-')
+            .next()
+            .and_then(|n| n.parse::<u32>().ok())
+            .unwrap_or(u32::MAX)
+    });
+    entries
 }
 
 fn format_markdown(items: &[ArticleItem]) -> String {
@@ -283,6 +289,13 @@ fn format_markdown(items: &[ArticleItem]) -> String {
                             para.push_str(href);
                             para.push_str(") ");
                         }
+                        InlineNode::Ref { label, .. } => {
+                            // Append [N] directly — no space before a superscript marker
+                            para.push('[');
+                            para.push('^');
+                            para.push_str(label);
+                            para.push(']');
+                        }
                     }
                 }
                 out.push_str(para.trim_end());
@@ -292,16 +305,36 @@ fn format_markdown(items: &[ArticleItem]) -> String {
                 emit_section_heading(&mut out, &img.section, img.section_level, &mut last_section);
                 out.push('\n');
                 out.push_str("![");
-                out.push_str(&img.caption);
+                out.push_str(if img.alt.is_empty() {
+                    &img.alt
+                } else {
+                    &img.caption
+                });
                 out.push_str("](");
                 out.push_str(&img.src);
                 out.push(')');
                 out.push('\n');
                 if !img.caption.is_empty() {
-                    out.push('\n');
                     out.push('_');
                     out.push_str(&img.caption);
                     out.push('_');
+                    out.push('\n');
+                }
+            }
+            ArticleItem::References(refs) => {
+                if refs.is_empty() {
+                    continue;
+                }
+                out.push_str("\n## References\n");
+                for (note_id, citation) in sorted_refs(refs) {
+                    // Extract the numeric label from the note_id tail
+                    let label = note_id.rsplit('-').next().unwrap_or(note_id.as_str());
+                    out.push('\n');
+                    out.push('[');
+                    out.push('^');
+                    out.push_str(label);
+                    out.push_str("]: ");
+                    out.push_str(citation);
                     out.push('\n');
                 }
             }

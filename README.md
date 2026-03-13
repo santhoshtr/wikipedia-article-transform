@@ -71,7 +71,7 @@ Fetch and extract a live Wikipedia article directly:
 
 ```toml
 [dependencies]
-wikipedia-article-transform = { version = "0.1", features = ["fetch"] }
+wikipedia-article-transform = { version = "0.1", features = ["cli"] }
 ```
 
 ```rust
@@ -86,7 +86,7 @@ println!("{}", segments.format_markdown());
 Install with the `fetch` feature (required for the binary):
 
 ```sh
-cargo install wikipedia-article-transform --features fetch
+cargo install wikipedia-article-transform --features cli
 ```
 
 **Fetch an article:**
@@ -144,7 +144,7 @@ The following are excluded from extracted text:
 
 | Feature | Default | Description |
 |---|---|---|
-| `fetch` | no | Enables `get_text()` and the CLI binary (adds `reqwest` + `tokio`) |
+| `cli` | no | Enables `get_text()` and the CLI binary (adds `reqwest` + `tokio`) |
 
 ## License
 

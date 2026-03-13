@@ -11,7 +11,7 @@ categories = ["text-processing", "parsing"]
 
 [features]
 default = []
-fetch = ["dep:reqwest", "dep:tokio"]
+cli = ["dep:reqwest", "dep:tokio"]
 
 [dependencies]
 tree-sitter-html = "0.23.2"
@@ -38,4 +38,4 @@ features = ["rt-multi-thread", "macros"]
 [[bin]]
 name = "wiki-html-text-extractor"
 path = "src/main.rs"
-required-features = ["fetch"]
+required-features = ["cli"]

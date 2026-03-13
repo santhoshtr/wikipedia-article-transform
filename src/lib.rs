@@ -32,7 +32,7 @@
 //! Enable the `fetch` feature to fetch Wikipedia articles directly via the REST API:
 //!
 //! ```toml
-//! wikipedia-article-transform = { version = "0.1", features = ["fetch"] }
+//! wikipedia-article-transform = { version = "0.1", features = ["cli"] }
 //! ```
 
 pub mod formatters;
@@ -453,14 +453,14 @@ impl Default for WikiPage {
 /// Fetch a Wikipedia article by language code and title, returning extracted text segments.
 ///
 /// Requires the `fetch` feature.
-#[cfg(feature = "fetch")]
+#[cfg(feature = "cli")]
 pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<TextSegment>> {
     let html = get_page_content_html(language, title).await?;
     let mut page = WikiPage::new()?;
     Ok(page.extract_text(&html)?)
 }
 
-#[cfg(feature = "fetch")]
+#[cfg(feature = "cli")]
 async fn get_page_content_html(language: &str, title: &str) -> anyhow::Result<String> {
     let url = format!("https://{language}.wikipedia.org/api/rest_v1/page/html/{title}?stash=false");
     let client = reqwest::Client::new();

@@ -1,7 +1,7 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
 use std::io::{self, Write};
-use wikipedia_article_transform::{get_text, format_plain, format_json};
+use wikipedia_article_transform::{get_text, ArticleFormat};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Extract plain text from Wikipedia HTML")]
@@ -32,6 +32,8 @@ enum OutputFormat {
     Plain,
     /// Semantic JSON with section tree
     Json,
+    /// Markdown with inline bold/italic/link formatting
+    Markdown,
 }
 
 #[tokio::main]
@@ -50,16 +52,12 @@ async fn main() -> anyhow::Result<()> {
 
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            match format {
-                OutputFormat::Json => {
-                    let json = format_json(&segments)?;
-                    writeln!(handle, "{json}")?;
-                }
-                OutputFormat::Plain => {
-                    let text = format_plain(&segments);
-                    writeln!(handle, "{text}")?;
-                }
-            }
+            let output = match format {
+                OutputFormat::Plain => segments.format_plain(),
+                OutputFormat::Json => segments.format_json()?,
+                OutputFormat::Markdown => segments.format_markdown(),
+            };
+            writeln!(handle, "{output}")?;
         }
     }
 

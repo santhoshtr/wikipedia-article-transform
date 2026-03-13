@@ -4,7 +4,8 @@ Extract plain text from Wikipedia article HTML using [tree-sitter](https://tree-
 
 Parses the full HTML structure of a Wikipedia article and returns clean prose text — skipping
 infoboxes, navigation elements, references, hatnotes, and other non-content markup. Section
-headings are tracked so each paragraph knows which section it belongs to.
+headings are tracked so each paragraph knows which section it belongs to, and inline elements
+(`<b>`, `<i>`, `<a>`) are captured for rich output formats.
 
 ## Usage
 
@@ -18,17 +19,17 @@ wikipedia-article-transform = "0.1"
 **Simple: get all text as a string**
 
 ```rust
-use wiki_html_text_extractor::WikiPage;
+use wikipedia_article_transform::WikiPage;
 
 let html = r#"<h2>History</h2><p id="p1">Some text here.</p>"#;
 let text = WikiPage::extract_text_plain(html)?;
 // "Some text here."
 ```
 
-**Structured: get paragraphs with section and tag context**
+**Structured: get paragraphs with section context**
 
 ```rust
-use wiki_html_text_extractor::WikiPage;
+use wikipedia_article_transform::WikiPage;
 
 let mut page = WikiPage::new()?;
 let segments = page.extract_text(html)?;
@@ -41,23 +42,27 @@ for seg in &segments {
 Reuse the same `WikiPage` across many articles — it resets state internally on each call
 and avoids reinitialising the parser.
 
-**Filtering by context**
+**Filtering by section**
 
 ```rust
-// Only paragraphs inside a specific section
 let prose: Vec<_> = segments.iter()
     .filter(|s| s.section.starts_with("History"))
     .collect();
+```
 
-// Skip paragraphs inside a table
-let no_tables: Vec<_> = segments.iter()
-    .filter(|s| !s.is_in_tag("table"))
-    .collect();
+**Output formatting**
 
-// Match a CSS-like selector path
-let main_content: Vec<_> = segments.iter()
-    .filter(|s| s.is_in_tag_with_class("mw-body"))
-    .collect();
+```rust
+use wikipedia_article_transform::ArticleFormat;
+
+// Plain text with # heading lines
+let plain = segments.format_plain();
+
+// Semantic JSON: { "intro": [...], "sections": [{ "heading": "...", "level": 2, ... }] }
+let json = segments.format_json()?;
+
+// Markdown with **bold**, _italic_, [links](href)
+let markdown = segments.format_markdown();
 ```
 
 ### With the `fetch` feature
@@ -70,9 +75,10 @@ wikipedia-article-transform = { version = "0.1", features = ["fetch"] }
 ```
 
 ```rust
-use wiki_html_text_extractor::get_text;
+use wikipedia_article_transform::{get_text, ArticleFormat};
 
 let segments = get_text("en", "Rust_(programming_language)").await?;
+println!("{}", segments.format_markdown());
 ```
 
 ## CLI
@@ -86,16 +92,37 @@ cargo install wikipedia-article-transform --features fetch
 **Fetch an article:**
 
 ```sh
-wikipedia-article-transform fetch --language en --title "Rust_(programming_language)"
-wikipedia-article-transform fetch --language ml --title "കേരളം" --format json
+# Plain text (default)
+wiki-html-text-extractor fetch --language en --title "Rust_(programming_language)"
+
+# Semantic JSON section tree
+wiki-html-text-extractor fetch --language ml --title "കേരളം" --format json
+
+# Markdown with inline formatting
+wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format markdown
 ```
 
-**Process a NDJSON stream (for bulk pipeline use):**
+## JSON output shape
 
-```sh
-# Input:  {"id": 123, "url": "...", "name": "...", "html": "..."}
-# Output: {"id": 123, "url": "...", "name": "...", "text": "..."}
-cat articles.ndjson | wikipedia-article-transform stdin
+```json
+{
+  "intro": ["Paragraphs before the first heading..."],
+  "sections": [
+    {
+      "heading": "Safety and precautions",
+      "level": 2,
+      "paragraphs": ["Overview text..."],
+      "subsections": [
+        {
+          "heading": "Combustion and other hazards",
+          "level": 3,
+          "paragraphs": ["Liquid oxygen spills..."],
+          "subsections": []
+        }
+      ]
+    }
+  ]
+}
 ```
 
 ## Skipped elements

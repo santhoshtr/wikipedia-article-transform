@@ -14,7 +14,7 @@
 //! assert_eq!(text, "Hello world.");
 //! ```
 //!
-//! For richer output with section tracking, use [`WikiPage::extract_text`]:
+//! For richer output with section tracking and inline structure, use [`WikiPage::extract_text`]:
 //!
 //! ```rust
 //! use wikipedia_article_transform::WikiPage;
@@ -35,18 +35,51 @@
 //! wikipedia-article-transform = { version = "0.1", features = ["fetch"] }
 //! ```
 
+pub mod formatters;
+pub use formatters::ArticleFormat;
+
 use serde::Serialize;
 use tree_sitter::{Node, Parser};
 use tree_sitter_html::LANGUAGE;
 
+/// An inline content node within a paragraph.
+///
+/// Captures the inline structure of paragraph text so formatters can render
+/// bold, italic, and link markup.
+#[derive(Debug, Clone)]
+pub enum InlineNode {
+    /// Plain text.
+    Text(String),
+    /// Bold text (`<b>` or `<strong>`).
+    Bold(String),
+    /// Italic text (`<i>` or `<em>`).
+    Italic(String),
+    /// A hyperlink (`<a href="...">`).
+    Link { text: String, href: String },
+}
+
+impl InlineNode {
+    /// Returns the plain text content, stripping any markup.
+    pub fn plain_text(&self) -> &str {
+        match self {
+            InlineNode::Text(s) | InlineNode::Bold(s) | InlineNode::Italic(s) => s,
+            InlineNode::Link { text, .. } => text,
+        }
+    }
+}
+
 /// A single paragraph-level text segment extracted from a Wikipedia article.
 ///
-/// Each segment corresponds to a `<p>` block in the HTML. It captures the paragraph
-/// text, the MediaWiki paragraph ID, the section heading path, and the heading depth.
+/// Each segment corresponds to a `<p>` block in the HTML. It captures the plain
+/// text, the inline content structure, the MediaWiki paragraph ID, the section
+/// heading path, and the heading depth.
 #[derive(Debug, Clone, Serialize)]
 pub struct TextSegment {
-    /// The extracted plain text of this segment.
+    /// The extracted plain text of this segment (inline markup stripped).
     pub text: String,
+    /// The inline content nodes, preserving bold/italic/link structure.
+    #[serde(skip)]
+    pub content: Vec<InlineNode>,
     /// The `id` attribute of the enclosing `<p>` element, if present.
     pub mwid: String,
     /// The section heading path, e.g. `"History - Early life"`.
@@ -84,9 +117,6 @@ pub struct WikiPage {
 
 impl WikiPage {
     /// Creates a new `WikiPage`, initialising the tree-sitter HTML parser.
-    ///
-    /// Returns an error if the HTML grammar cannot be loaded, which should not
-    /// happen in practice since the grammar is statically compiled in.
     pub fn new() -> anyhow::Result<Self> {
         let language = LANGUAGE.into();
         let mut parser = Parser::new();
@@ -114,14 +144,11 @@ impl WikiPage {
             .parse(html, None)
             .ok_or_else(|| anyhow::anyhow!("Failed to parse HTML"))?;
         let source = html.as_bytes();
-        self.walk_and_collect(&tree.root_node(), source);
+        self.walk_and_collect(&tree.root_node(), source, false);
         Ok(self.text_segments.clone())
     }
 
     /// Convenience method: parse `html` and return all paragraph text joined by `"\n\n"`.
-    ///
-    /// Creates a temporary `WikiPage` internally. Use [`WikiPage::extract_text`] directly
-    /// when processing many articles to avoid re-initialising the parser.
     pub fn extract_text_plain(html: &str) -> anyhow::Result<String> {
         let mut page = WikiPage::new()?;
         let segments = page.extract_text(html)?;
@@ -191,7 +218,56 @@ impl WikiPage {
             .unwrap_or(0)
     }
 
-    fn walk_and_collect(&mut self, node: &Node, source: &[u8]) {
+    /// Push an inline node onto the last text segment, also updating the plain text.
+    fn push_inline(&mut self, node: InlineNode) {
+        if self.text_segments.is_empty() {
+            return;
+        }
+        let last = self.text_segments.len() - 1;
+        let plain = node.plain_text().to_string();
+        let seg = &mut self.text_segments[last];
+        if !seg.text.is_empty() && !plain.is_empty() {
+            // Avoid double-spacing: only add space if last char isn't already space
+            if !seg.text.ends_with(' ') {
+                seg.text.push(' ');
+            }
+        }
+        seg.text.push_str(plain.trim());
+        seg.content.push(node);
+    }
+
+    /// Collect inline text from an element node into a single String (used for bold/italic).
+    fn collect_inline_text(&self, node: &Node, source: &[u8]) -> String {
+        let mut text = String::new();
+        for child in node.children(&mut node.walk()) {
+            match child.kind() {
+                "text" => {
+                    if let Ok(t) = child.utf8_text(source) {
+                        let trimmed = t.trim();
+                        if !trimmed.is_empty() {
+                            if !text.is_empty() {
+                                text.push(' ');
+                            }
+                            text.push_str(trimmed);
+                        }
+                    }
+                }
+                "element" => {
+                    let child_text = self.collect_inline_text(&child, source);
+                    if !child_text.is_empty() {
+                        if !text.is_empty() {
+                            text.push(' ');
+                        }
+                        text.push_str(&child_text);
+                    }
+                }
+                _ => {}
+            }
+        }
+        text
+    }
+
+    fn walk_and_collect(&mut self, node: &Node, source: &[u8], inside_paragraph: bool) {
         match node.kind() {
             "text" => {
                 if let Ok(text) = node.utf8_text(source) {
@@ -200,16 +276,13 @@ impl WikiPage {
                         if self.text_segments.is_empty() {
                             self.text_segments.push(TextSegment {
                                 text: String::new(),
+                                content: Vec::new(),
                                 mwid: String::new(),
                                 section: self.get_current_section_string(),
                                 section_level: self.get_current_section_level(),
                             });
                         }
-                        let last = self.text_segments.len() - 1;
-                        if !self.text_segments[last].text.is_empty() {
-                            self.text_segments[last].text.push(' ');
-                        }
-                        self.text_segments[last].text.push_str(trimmed);
+                        self.push_inline(InlineNode::Text(trimmed.to_string()));
                     }
                 }
             }
@@ -246,22 +319,63 @@ impl WikiPage {
                             self.update_sections(level, header_text);
                         }
                         return;
-                    } else if tag_name == "p" {
+                    }
+
+                    if tag_name == "p" {
                         let mwid = attributes.iter()
                             .find(|(k, _)| k == "id")
                             .map(|(_, v)| v.clone())
                             .unwrap_or_default();
                         self.text_segments.push(TextSegment {
                             text: String::new(),
+                            content: Vec::new(),
                             mwid,
                             section: self.get_current_section_string(),
                             section_level: self.get_current_section_level(),
                         });
+                        for i in 0..node.child_count() {
+                            if let Some(child) = node.child(i as u32) {
+                                self.walk_and_collect(&child, source, true);
+                            }
+                        }
+                        return;
+                    }
+
+                    // Inline elements inside a paragraph
+                    if inside_paragraph {
+                        match tag_name.as_str() {
+                            "b" | "strong" => {
+                                let text = self.collect_inline_text(node, source);
+                                if !text.is_empty() {
+                                    self.push_inline(InlineNode::Bold(text));
+                                }
+                                return;
+                            }
+                            "i" | "em" => {
+                                let text = self.collect_inline_text(node, source);
+                                if !text.is_empty() {
+                                    self.push_inline(InlineNode::Italic(text));
+                                }
+                                return;
+                            }
+                            "a" => {
+                                let href = attributes.iter()
+                                    .find(|(k, _)| k == "href")
+                                    .map(|(_, v)| v.clone())
+                                    .unwrap_or_default();
+                                let text = self.collect_inline_text(node, source);
+                                if !text.is_empty() {
+                                    self.push_inline(InlineNode::Link { text, href });
+                                }
+                                return;
+                            }
+                            _ => {}
+                        }
                     }
 
                     for i in 0..node.child_count() {
                         if let Some(child) = node.child(i as u32) {
-                            self.walk_and_collect(&child, source);
+                            self.walk_and_collect(&child, source, inside_paragraph);
                         }
                     }
                 }
@@ -269,14 +383,13 @@ impl WikiPage {
             _ => {
                 for i in 0..node.child_count() {
                     if let Some(child) = node.child(i as u32) {
-                        self.walk_and_collect(&child, source);
+                        self.walk_and_collect(&child, source, inside_paragraph);
                     }
                 }
             }
         }
     }
 
-    /// Returns `(tag_name, attributes)` for an element node, or `None` if unparseable.
     fn parse_element(&self, element_node: &Node, source: &[u8]) -> Option<(String, Vec<(String, String)>)> {
         let start_tag = element_node
             .children(&mut element_node.walk())
@@ -337,160 +450,9 @@ impl Default for WikiPage {
     }
 }
 
-/// Format a slice of [`TextSegment`]s as plain text.
-///
-/// Section headings are emitted as `#`/`##`/`###` lines (matching heading depth) when
-/// the section changes. Paragraphs are separated by blank lines. No metadata labels.
-///
-/// # Example
-///
-/// ```rust
-/// use wikipedia_article_transform::{WikiPage, format_plain};
-///
-/// let html = "<h2>History</h2><p>Para one.</p><h3>Early life</h3><p>Para two.</p>";
-/// let mut page = WikiPage::new().unwrap();
-/// let segments = page.extract_text(html).unwrap();
-/// let text = format_plain(&segments);
-/// assert!(text.contains("## History\n"));
-/// assert!(text.contains("### Early life\n"));
-/// ```
-pub fn format_plain(segments: &[TextSegment]) -> String {
-    let mut out = String::new();
-    let mut last_section = String::new();
-
-    for seg in segments {
-        let text = seg.text.trim();
-        if text.is_empty() {
-            continue;
-        }
-
-        if seg.section != last_section {
-            if !out.is_empty() {
-                out.push('\n');
-            }
-            if !seg.section.is_empty() {
-                let hashes = "#".repeat(seg.section_level.max(1) as usize);
-                // Emit only the deepest heading component
-                let heading = seg.section.rsplit(" - ").next().unwrap_or(&seg.section);
-                out.push_str(&hashes);
-                out.push(' ');
-                out.push_str(heading);
-                out.push('\n');
-            }
-            last_section = seg.section.clone();
-        }
-
-        out.push('\n');
-        out.push_str(text);
-        out.push('\n');
-    }
-
-    out
-}
-
-/// Format a slice of [`TextSegment`]s as a semantic JSON section tree.
-///
-/// The output groups paragraphs by section hierarchy:
-///
-/// ```json
-/// {
-///   "intro": ["Paragraphs before first heading..."],
-///   "sections": [
-///     {
-///       "heading": "History",
-///       "level": 2,
-///       "paragraphs": ["..."],
-///       "subsections": [
-///         { "heading": "Early life", "level": 3, "paragraphs": ["..."], "subsections": [] }
-///       ]
-///     }
-///   ]
-/// }
-/// ```
-///
-/// `mwid` is omitted — it is an internal MediaWiki detail.
-pub fn format_json(segments: &[TextSegment]) -> anyhow::Result<String> {
-    #[derive(Serialize)]
-    struct Section {
-        heading: String,
-        level: u8,
-        paragraphs: Vec<String>,
-        subsections: Vec<Section>,
-    }
-
-    #[derive(Serialize)]
-    struct ArticleTree {
-        intro: Vec<String>,
-        sections: Vec<Section>,
-    }
-
-    let mut tree = ArticleTree {
-        intro: Vec::new(),
-        sections: Vec::new(),
-    };
-
-    for seg in segments {
-        let text = seg.text.trim().to_string();
-        if text.is_empty() {
-            continue;
-        }
-
-        if seg.section.is_empty() {
-            tree.intro.push(text);
-            continue;
-        }
-
-        // Walk the heading path components to find/create the right node.
-        let parts: Vec<&str> = seg.section.split(" - ").collect();
-        let mut siblings = &mut tree.sections;
-
-        for (i, part) in parts.iter().enumerate() {
-            let level = if i == 0 {
-                // Top-level: use section_level adjusted back to root depth.
-                // section_level is the deepest heading; parts.len() tells us depth.
-                seg.section_level.saturating_sub((parts.len() - 1) as u8)
-            } else {
-                seg.section_level.saturating_sub((parts.len() - 1 - i) as u8)
-            };
-
-            let pos = siblings.iter().position(|s| s.heading == *part);
-            if pos.is_none() {
-                siblings.push(Section {
-                    heading: part.to_string(),
-                    level,
-                    paragraphs: Vec::new(),
-                    subsections: Vec::new(),
-                });
-            }
-            let idx = siblings.iter().position(|s| s.heading == *part).unwrap();
-
-            if i == parts.len() - 1 {
-                siblings[idx].paragraphs.push(text.clone());
-            } else {
-                siblings = &mut siblings[idx].subsections;
-            }
-        }
-    }
-
-    Ok(serde_json::to_string_pretty(&tree)?)
-}
-
 /// Fetch a Wikipedia article by language code and title, returning extracted text segments.
 ///
 /// Requires the `fetch` feature.
-///
-/// # Example
-///
-/// ```no_run
-/// # #[cfg(feature = "fetch")]
-/// # async fn example() -> anyhow::Result<()> {
-/// let segments = wikipedia_article_transform::get_text("en", "Rust_(programming_language)").await?;
-/// for seg in &segments {
-///     println!("{}", seg.text);
-/// }
-/// # Ok(())
-/// # }
-/// ```
 #[cfg(feature = "fetch")]
 pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<TextSegment>> {
     let html = get_page_content_html(language, title).await?;
@@ -614,16 +576,46 @@ mod tests {
     }
 
     #[test]
+    fn test_inline_bold() {
+        let segs = extract("<p><b>Bold</b> text</p>");
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].text, "Bold text");
+        assert!(matches!(&segs[0].content[0], InlineNode::Bold(s) if s == "Bold"));
+        assert!(matches!(&segs[0].content[1], InlineNode::Text(s) if s == "text"));
+    }
+
+    #[test]
+    fn test_inline_italic() {
+        let segs = extract("<p><i>italic</i></p>");
+        assert_eq!(segs.len(), 1);
+        assert!(matches!(&segs[0].content[0], InlineNode::Italic(s) if s == "italic"));
+    }
+
+    #[test]
+    fn test_inline_strong_em() {
+        let segs = extract("<p><strong>S</strong> and <em>E</em></p>");
+        assert!(matches!(&segs[0].content[0], InlineNode::Bold(s) if s == "S"));
+        assert!(matches!(&segs[0].content[2], InlineNode::Italic(s) if s == "E"));
+    }
+
+    #[test]
+    fn test_inline_link() {
+        let segs = extract(r#"<p><a href="/wiki/X">anchor</a></p>"#);
+        assert_eq!(segs.len(), 1);
+        assert!(matches!(&segs[0].content[0],
+            InlineNode::Link { text, href } if text == "anchor" && href == "/wiki/X"));
+    }
+
+    #[test]
     fn test_format_plain_sections() {
         let html = "<p>Intro.</p><h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
         let segs = extract(html);
-        let out = format_plain(&segs);
+        let out = segs.format_plain();
         assert!(out.contains("\nIntro.\n"), "intro paragraph missing");
         assert!(out.contains("## History\n"), "h2 heading missing");
         assert!(out.contains("\nA.\n"), "first section paragraph missing");
         assert!(out.contains("### Early life\n"), "h3 heading missing");
         assert!(out.contains("\nB.\n"), "subsection paragraph missing");
-        // headings appear before their paragraphs
         assert!(out.find("## History").unwrap() < out.find("\nA.\n").unwrap());
         assert!(out.find("### Early life").unwrap() < out.find("\nB.\n").unwrap());
     }
@@ -632,7 +624,7 @@ mod tests {
     fn test_format_json_tree() {
         let html = "<p>Intro.</p><h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
         let segs = extract(html);
-        let json_str = format_json(&segs).unwrap();
+        let json_str = segs.format_json().unwrap();
         let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert_eq!(v["intro"][0], "Intro.");
         assert_eq!(v["sections"][0]["heading"], "History");
@@ -641,5 +633,15 @@ mod tests {
         assert_eq!(v["sections"][0]["subsections"][0]["heading"], "Early life");
         assert_eq!(v["sections"][0]["subsections"][0]["level"], 3);
         assert_eq!(v["sections"][0]["subsections"][0]["paragraphs"][0], "B.");
+    }
+
+    #[test]
+    fn test_format_markdown_inline() {
+        let segs = extract("<h2>Title</h2><p><b>Bold</b> and <i>italic</i> and <a href=\"/x\">link</a></p>");
+        let out = segs.format_markdown();
+        assert!(out.contains("## Title"));
+        assert!(out.contains("**Bold**"));
+        assert!(out.contains("_italic_"));
+        assert!(out.contains("[link](/x)"));
     }
 }

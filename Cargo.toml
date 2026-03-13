@@ -1,0 +1,41 @@
+[package]
+name = "wikipedia-article-transform"
+version = "0.1.0"
+edition = "2024"
+description = "Transform Wikipedia articles in html to plaintext and markdown formats"
+license = "MIT"
+repository = "https://github.com/smc/wikisentences"
+readme = "README.md"
+keywords = ["wikipedia", "html", "text-extraction", "nlp", "tree-sitter"]
+categories = ["text-processing", "parsing"]
+
+[features]
+default = []
+fetch = ["dep:reqwest", "dep:tokio"]
+
+[dependencies]
+tree-sitter-html = "0.23.2"
+tree-sitter = "0.26.6"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0"
+
+[dependencies.clap]
+version = "4.5"
+features = ["derive"]
+
+[dependencies.reqwest]
+version = "0.13"
+optional = true
+default-features = false
+features = ["json", "stream", "default-tls"]
+
+[dependencies.tokio]
+version = "1"
+optional = true
+features = ["rt-multi-thread", "macros"]
+
+[[bin]]
+name = "wiki-html-text-extractor"
+path = "src/main.rs"
+required-features = ["fetch"]

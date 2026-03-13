@@ -17,14 +17,16 @@
 //! For richer output with section tracking and inline structure, use [`WikiPage::extract_text`]:
 //!
 //! ```rust
-//! use wikipedia_article_transform::WikiPage;
+//! use wikipedia_article_transform::{WikiPage, ArticleItem};
 //!
 //! let html = r#"<html><body><h2>History</h2><p id="p1">Some text.</p></body></html>"#;
 //! let mut page = WikiPage::new().unwrap();
-//! let segments = page.extract_text(html).unwrap();
-//! assert_eq!(segments[0].section, "History");
-//! assert_eq!(segments[0].section_level, 2);
-//! assert_eq!(segments[0].text, "Some text.");
+//! let items = page.extract_text(html).unwrap();
+//! if let ArticleItem::Paragraph(seg) = &items[0] {
+//!     assert_eq!(seg.section, "History");
+//!     assert_eq!(seg.section_level, 2);
+//!     assert_eq!(seg.text, "Some text.");
+//! }
 //! ```
 //!
 //! # Optional feature: `fetch`
@@ -56,6 +58,36 @@ pub enum InlineNode {
     Italic(String),
     /// A hyperlink (`<a href="...">`).
     Link { text: String, href: String },
+}
+
+/// An image extracted from a `<figure>` block in a Wikipedia article.
+///
+/// Wikipedia wraps images in `<figure>` elements containing an `<img>` and an
+/// optional `<figcaption>`. Images appear between paragraphs, not inside them.
+#[derive(Debug, Clone, Serialize)]
+pub struct ImageSegment {
+    /// Resolved URL of the image (thumbnail size as served by Wikimedia).
+    pub src: String,
+    /// Alt text from the `<img alt="...">` attribute.
+    pub alt: String,
+    /// Plain text of the `<figcaption>` element, if present.
+    pub caption: String,
+    /// The section heading path at the point where the image appears.
+    pub section: String,
+    /// The heading level of the current section (1–6). 0 if before any heading.
+    pub section_level: u8,
+}
+
+/// A single item extracted from a Wikipedia article, in document order.
+///
+/// Paragraphs and images are interleaved as they appear in the source HTML,
+/// so formatters can reproduce the original reading order.
+#[derive(Debug, Clone)]
+pub enum ArticleItem {
+    /// A paragraph extracted from a `<p>` element.
+    Paragraph(TextSegment),
+    /// An image extracted from a `<figure>` element.
+    Image(ImageSegment),
 }
 
 impl InlineNode {
@@ -103,15 +135,17 @@ struct SectionInfo {
 /// # Example
 ///
 /// ```rust
-/// use wikipedia_article_transform::WikiPage;
+/// use wikipedia_article_transform::{WikiPage, ArticleItem};
 ///
 /// let mut page = WikiPage::new().unwrap();
-/// let segments = page.extract_text("<p>Hello.</p>").unwrap();
-/// assert_eq!(segments[0].text, "Hello.");
+/// let items = page.extract_text("<p>Hello.</p>").unwrap();
+/// if let ArticleItem::Paragraph(seg) = &items[0] {
+///     assert_eq!(seg.text, "Hello.");
+/// }
 /// ```
 pub struct WikiPage {
     parser: Parser,
-    text_segments: Vec<TextSegment>,
+    items: Vec<ArticleItem>,
     current_sections: Vec<SectionInfo>,
     /// Base URL used to resolve relative hrefs, e.g. `https://en.wikipedia.org/wiki/`.
     base_url: Option<String>,
@@ -125,7 +159,7 @@ impl WikiPage {
         parser.set_language(&language)?;
         Ok(WikiPage {
             parser,
-            text_segments: Vec::new(),
+            items: Vec::new(),
             current_sections: Vec::new(),
             base_url: None,
         })
@@ -167,7 +201,7 @@ impl WikiPage {
         href.to_string()
     }
 
-    /// Parses `html` and returns one [`TextSegment`] per paragraph.
+    /// Parses `html` and returns one [`ArticleItem`] per paragraph or image, in document order.
     ///
     /// The parser state is reset on each call, so the same `WikiPage` can be
     /// reused safely across multiple articles.
@@ -175,8 +209,8 @@ impl WikiPage {
     /// Skipped elements: `<script>`, `<style>`, `<link>`, and elements with
     /// classes `shortdescription`, `hatnote`, `infobox`, `reference`, `navbox`,
     /// `noprint`, `reflist`, `citation`.
-    pub fn extract_text(&mut self, html: &str) -> anyhow::Result<Vec<TextSegment>> {
-        self.text_segments.clear();
+    pub fn extract_text(&mut self, html: &str) -> anyhow::Result<Vec<ArticleItem>> {
+        self.items.clear();
         self.current_sections.clear();
         let tree = self
             .parser
@@ -184,17 +218,22 @@ impl WikiPage {
             .ok_or_else(|| anyhow::anyhow!("Failed to parse HTML"))?;
         let source = html.as_bytes();
         self.walk_and_collect(&tree.root_node(), source, false);
-        Ok(self.text_segments.clone())
+        Ok(self.items.clone())
     }
 
     /// Convenience method: parse `html` and return all paragraph text joined by `"\n\n"`.
     pub fn extract_text_plain(html: &str) -> anyhow::Result<String> {
         let mut page = WikiPage::new()?;
-        let segments = page.extract_text(html)?;
-        let text = segments
+        let items = page.extract_text(html)?;
+        let text = items
             .iter()
-            .map(|s| s.text.trim())
-            .filter(|t| !t.is_empty())
+            .filter_map(|item| match item {
+                ArticleItem::Paragraph(seg) => {
+                    let t = seg.text.trim();
+                    if t.is_empty() { None } else { Some(t) }
+                }
+                ArticleItem::Image(_) => None,
+            })
             .collect::<Vec<_>>()
             .join("\n\n");
         Ok(text)
@@ -259,20 +298,19 @@ impl WikiPage {
 
     /// Push an inline node onto the last text segment, also updating the plain text.
     fn push_inline(&mut self, node: InlineNode) {
-        if self.text_segments.is_empty() {
-            return;
-        }
-        let last = self.text_segments.len() - 1;
-        let plain = node.plain_text().to_string();
-        let seg = &mut self.text_segments[last];
-        if !seg.text.is_empty() && !plain.is_empty() {
-            // Avoid double-spacing: only add space if last char isn't already space
-            if !seg.text.ends_with(' ') {
-                seg.text.push(' ');
+        let last_seg = self.items.iter_mut().rev().find_map(|item| {
+            if let ArticleItem::Paragraph(seg) = item { Some(seg) } else { None }
+        });
+        if let Some(seg) = last_seg {
+            let plain = node.plain_text().to_string();
+            if !seg.text.is_empty() && !plain.is_empty() {
+                if !seg.text.ends_with(' ') {
+                    seg.text.push(' ');
+                }
             }
+            seg.text.push_str(plain.trim());
+            seg.content.push(node);
         }
-        seg.text.push_str(plain.trim());
-        seg.content.push(node);
     }
 
     /// Collect inline text from an element node into a single String (used for bold/italic).
@@ -312,14 +350,14 @@ impl WikiPage {
                 if let Ok(text) = node.utf8_text(source) {
                     let trimmed = text.trim();
                     if !trimmed.is_empty() {
-                        if self.text_segments.is_empty() {
-                            self.text_segments.push(TextSegment {
+                        if self.items.is_empty() {
+                            self.items.push(ArticleItem::Paragraph(TextSegment {
                                 text: String::new(),
                                 content: Vec::new(),
                                 mwid: String::new(),
                                 section: self.get_current_section_string(),
                                 section_level: self.get_current_section_level(),
-                            });
+                            }));
                         }
                         self.push_inline(InlineNode::Text(trimmed.to_string()));
                     }
@@ -365,17 +403,24 @@ impl WikiPage {
                             .find(|(k, _)| k == "id")
                             .map(|(_, v)| v.clone())
                             .unwrap_or_default();
-                        self.text_segments.push(TextSegment {
+                        self.items.push(ArticleItem::Paragraph(TextSegment {
                             text: String::new(),
                             content: Vec::new(),
                             mwid,
                             section: self.get_current_section_string(),
                             section_level: self.get_current_section_level(),
-                        });
+                        }));
                         for i in 0..node.child_count() {
                             if let Some(child) = node.child(i as u32) {
                                 self.walk_and_collect(&child, source, true);
                             }
+                        }
+                        return;
+                    }
+
+                    if tag_name == "figure" {
+                        if let Some(img) = self.extract_image(node, source) {
+                            self.items.push(ArticleItem::Image(img));
                         }
                         return;
                     }
@@ -431,18 +476,19 @@ impl WikiPage {
     }
 
     fn parse_element(&self, element_node: &Node, source: &[u8]) -> Option<(String, Vec<(String, String)>)> {
-        let start_tag = element_node
+        // Handle both normal elements (<tag>) and self-closing elements (<img/>)
+        let tag_container = element_node
             .children(&mut element_node.walk())
-            .find(|child| child.kind() == "start_tag")?;
+            .find(|child| child.kind() == "start_tag" || child.kind() == "self_closing_tag")?;
 
-        let tag_name_node = start_tag
-            .children(&mut start_tag.walk())
+        let tag_name_node = tag_container
+            .children(&mut tag_container.walk())
             .find(|child| child.kind() == "tag_name")?;
 
         let tag_name = tag_name_node.utf8_text(source).ok()?.to_string();
         let mut attributes = Vec::new();
 
-        for child in start_tag.children(&mut start_tag.walk()) {
+        for child in tag_container.children(&mut tag_container.walk()) {
             if child.kind() == "attribute" {
                 if let Some(pair) = self.parse_attribute(&child, source) {
                     attributes.push(pair);
@@ -482,6 +528,72 @@ impl WikiPage {
 
         attr_name.map(|name| (name, attr_value))
     }
+
+    /// Extract an [`ImageSegment`] from a `<figure>` element node.
+    ///
+    /// Looks for a descendant `<img>` (self-closing) for `src`/`alt`, and a
+    /// `<figcaption>` child for the caption text.
+    fn extract_image(&self, figure_node: &Node, source: &[u8]) -> Option<ImageSegment> {
+        let mut src = String::new();
+        let mut alt = String::new();
+        let mut caption = String::new();
+
+        for child in figure_node.children(&mut figure_node.walk()) {
+            if child.kind() == "element" {
+                if let Some((tag, attrs)) = self.parse_element(&child, source) {
+                    if tag == "figcaption" {
+                        caption = self.extract_text_from_element(&child, source);
+                    } else {
+                        // Recurse into <a class="mw-file-description"> to find <img>
+                        self.find_img(&child, source, &tag, &attrs, &mut src, &mut alt);
+                    }
+                }
+            }
+        }
+
+        if src.is_empty() {
+            return None;
+        }
+
+        Some(ImageSegment {
+            src: self.resolve_href(&src),
+            alt,
+            caption,
+            section: self.get_current_section_string(),
+            section_level: self.get_current_section_level(),
+        })
+    }
+
+    /// Recursively find the first `<img>` inside `node`, writing into `src`/`alt`.
+    fn find_img(
+        &self,
+        node: &Node,
+        source: &[u8],
+        tag: &str,
+        attrs: &[(String, String)],
+        src: &mut String,
+        alt: &mut String,
+    ) {
+        if !src.is_empty() {
+            return;
+        }
+        if tag == "img" {
+            if let Some((_, v)) = attrs.iter().find(|(k, _)| k == "src") {
+                *src = v.clone();
+            }
+            if let Some((_, v)) = attrs.iter().find(|(k, _)| k == "alt") {
+                *alt = v.clone();
+            }
+            return;
+        }
+        for child in node.children(&mut node.walk()) {
+            if child.kind() == "element" {
+                if let Some((child_tag, child_attrs)) = self.parse_element(&child, source) {
+                    self.find_img(&child, source, &child_tag, &child_attrs, src, alt);
+                }
+            }
+        }
+    }
 }
 
 impl Default for WikiPage {
@@ -490,11 +602,11 @@ impl Default for WikiPage {
     }
 }
 
-/// Fetch a Wikipedia article by language code and title, returning extracted text segments.
+/// Fetch a Wikipedia article by language code and title, returning article items in document order.
 ///
 /// Requires the `fetch` feature.
 #[cfg(feature = "cli")]
-pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<TextSegment>> {
+pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<ArticleItem>> {
     let html = get_page_content_html(language, title).await?;
     let mut page = WikiPage::new()?;
     page.set_base_url(language);
@@ -523,15 +635,28 @@ async fn get_page_content_html(language: &str, title: &str) -> anyhow::Result<St
 mod tests {
     use super::*;
 
-    fn extract(html: &str) -> Vec<TextSegment> {
+    fn extract(html: &str) -> Vec<ArticleItem> {
         WikiPage::extract_text_plain(html).unwrap();
         let mut page = WikiPage::new().unwrap();
         page.extract_text(html).unwrap()
     }
 
+    fn paragraphs(items: &[ArticleItem]) -> Vec<&TextSegment> {
+        items.iter().filter_map(|i| {
+            if let ArticleItem::Paragraph(s) = i { Some(s) } else { None }
+        }).collect()
+    }
+
+    fn images(items: &[ArticleItem]) -> Vec<&ImageSegment> {
+        items.iter().filter_map(|i| {
+            if let ArticleItem::Image(s) = i { Some(s) } else { None }
+        }).collect()
+    }
+
     #[test]
     fn test_basic_paragraph() {
-        let segs = extract("<html><body><p id=\"p1\">Hello world.</p></body></html>");
+        let items = extract("<html><body><p id=\"p1\">Hello world.</p></body></html>");
+        let segs = paragraphs(&items);
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].text, "Hello world.");
         assert_eq!(segs[0].mwid, "p1");
@@ -541,7 +666,8 @@ mod tests {
 
     #[test]
     fn test_multiple_paragraphs() {
-        let segs = extract("<p>First.</p><p>Second.</p><p>Third.</p>");
+        let items = extract("<p>First.</p><p>Second.</p><p>Third.</p>");
+        let segs = paragraphs(&items);
         assert_eq!(segs.len(), 3);
         assert_eq!(segs[0].text, "First.");
         assert_eq!(segs[1].text, "Second.");
@@ -551,7 +677,8 @@ mod tests {
     #[test]
     fn test_section_tracking() {
         let html = "<h2>History</h2><p>Para one.</p><h3>Early life</h3><p>Para two.</p>";
-        let segs = extract(html);
+        let items = extract(html);
+        let segs = paragraphs(&items);
         assert_eq!(segs[0].section, "History");
         assert_eq!(segs[1].section, "History - Early life");
     }
@@ -559,7 +686,8 @@ mod tests {
     #[test]
     fn test_section_level() {
         let html = "<h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
-        let segs = extract(html);
+        let items = extract(html);
+        let segs = paragraphs(&items);
         assert_eq!(segs[0].section_level, 2);
         assert_eq!(segs[1].section_level, 3);
     }
@@ -567,7 +695,8 @@ mod tests {
     #[test]
     fn test_section_resets_at_same_level() {
         let html = "<h2>History</h2><p>A.</p><h2>Geography</h2><p>B.</p>";
-        let segs = extract(html);
+        let items = extract(html);
+        let segs = paragraphs(&items);
         assert_eq!(segs[0].section, "History");
         assert_eq!(segs[1].section, "Geography");
     }
@@ -575,7 +704,8 @@ mod tests {
     #[test]
     fn test_excluded_class_infobox() {
         let html = r#"<p>Visible.</p><table class="infobox"><tr><td>Hidden.</td></tr></table><p>Also visible.</p>"#;
-        let segs = extract(html);
+        let items = extract(html);
+        let segs = paragraphs(&items);
         assert!(segs.iter().all(|s| !s.text.contains("Hidden")));
         assert_eq!(segs.len(), 2);
     }
@@ -583,7 +713,8 @@ mod tests {
     #[test]
     fn test_excluded_class_reflist() {
         let html = r#"<p>Main text.</p><div class="reflist"><p>Ref text.</p></div>"#;
-        let segs = extract(html);
+        let items = extract(html);
+        let segs = paragraphs(&items);
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].text, "Main text.");
     }
@@ -591,15 +722,16 @@ mod tests {
     #[test]
     fn test_script_and_style_skipped() {
         let html = "<p>Real.</p><script>var x=1;</script><style>body{}</style><p>Also real.</p>";
-        let segs = extract(html);
+        let items = extract(html);
+        let segs = paragraphs(&items);
         assert_eq!(segs.len(), 2);
         assert!(segs.iter().all(|s| !s.text.contains("var x")));
     }
 
     #[test]
     fn test_empty_html() {
-        let segs = extract("");
-        assert!(segs.is_empty());
+        let items = extract("");
+        assert!(items.is_empty());
     }
 
     #[test]
@@ -612,13 +744,15 @@ mod tests {
     #[test]
     fn test_default_impl() {
         let mut page = WikiPage::default();
-        let segs = page.extract_text("<p>Works.</p>").unwrap();
+        let items = page.extract_text("<p>Works.</p>").unwrap();
+        let segs = paragraphs(&items);
         assert_eq!(segs[0].text, "Works.");
     }
 
     #[test]
     fn test_inline_bold() {
-        let segs = extract("<p><b>Bold</b> text</p>");
+        let items = extract("<p><b>Bold</b> text</p>");
+        let segs = paragraphs(&items);
         assert_eq!(segs.len(), 1);
         assert_eq!(segs[0].text, "Bold text");
         assert!(matches!(&segs[0].content[0], InlineNode::Bold(s) if s == "Bold"));
@@ -627,21 +761,24 @@ mod tests {
 
     #[test]
     fn test_inline_italic() {
-        let segs = extract("<p><i>italic</i></p>");
+        let items = extract("<p><i>italic</i></p>");
+        let segs = paragraphs(&items);
         assert_eq!(segs.len(), 1);
         assert!(matches!(&segs[0].content[0], InlineNode::Italic(s) if s == "italic"));
     }
 
     #[test]
     fn test_inline_strong_em() {
-        let segs = extract("<p><strong>S</strong> and <em>E</em></p>");
+        let items = extract("<p><strong>S</strong> and <em>E</em></p>");
+        let segs = paragraphs(&items);
         assert!(matches!(&segs[0].content[0], InlineNode::Bold(s) if s == "S"));
         assert!(matches!(&segs[0].content[2], InlineNode::Italic(s) if s == "E"));
     }
 
     #[test]
     fn test_inline_link() {
-        let segs = extract(r#"<p><a href="./X">anchor</a></p>"#);
+        let items = extract(r#"<p><a href="./X">anchor</a></p>"#);
+        let segs = paragraphs(&items);
         assert_eq!(segs.len(), 1);
         // No base URL set: ./X passes through unchanged
         assert!(matches!(&segs[0].content[0],
@@ -653,7 +790,8 @@ mod tests {
         let html = r#"<p><a href="./Cryogenics">Cryogenics</a></p>"#;
         let mut page = WikiPage::new().unwrap();
         page.set_base_url("en");
-        let segs = page.extract_text(html).unwrap();
+        let items = page.extract_text(html).unwrap();
+        let segs = paragraphs(&items);
         assert!(matches!(&segs[0].content[0],
             InlineNode::Link { text, href }
                 if text == "Cryogenics"
@@ -664,7 +802,8 @@ mod tests {
     fn test_resolve_href_protocol_relative() {
         let html = r#"<p><a href="//en.wikipedia.org/wiki/Oxygen">O</a></p>"#;
         let mut page = WikiPage::new().unwrap();
-        let segs = page.extract_text(html).unwrap();
+        let items = page.extract_text(html).unwrap();
+        let segs = paragraphs(&items);
         assert!(matches!(&segs[0].content[0],
             InlineNode::Link { href, .. } if href == "https://en.wikipedia.org/wiki/Oxygen"));
     }
@@ -672,8 +811,8 @@ mod tests {
     #[test]
     fn test_format_plain_sections() {
         let html = "<p>Intro.</p><h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
-        let segs = extract(html);
-        let out = segs.format_plain();
+        let items = extract(html);
+        let out = items.format_plain();
         assert!(out.contains("\nIntro.\n"), "intro paragraph missing");
         assert!(out.contains("## History\n"), "h2 heading missing");
         assert!(out.contains("\nA.\n"), "first section paragraph missing");
@@ -686,8 +825,8 @@ mod tests {
     #[test]
     fn test_format_json_tree() {
         let html = "<p>Intro.</p><h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
-        let segs = extract(html);
-        let json_str = segs.format_json().unwrap();
+        let items = extract(html);
+        let json_str = items.format_json().unwrap();
         let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert_eq!(v["intro"][0], "Intro.");
         assert_eq!(v["sections"][0]["heading"], "History");
@@ -700,8 +839,8 @@ mod tests {
 
     #[test]
     fn test_format_markdown_inline() {
-        let segs = extract("<h2>Title</h2><p><b>Bold</b> and <i>italic</i> and <a href=\"/x\">link</a></p>");
-        let out = segs.format_markdown();
+        let items = extract("<h2>Title</h2><p><b>Bold</b> and <i>italic</i> and <a href=\"/x\">link</a></p>");
+        let out = items.format_markdown();
         assert!(out.contains("## Title"));
         assert!(out.contains("**Bold**"));
         assert!(out.contains("_italic_"));
@@ -710,5 +849,117 @@ mod tests {
         assert!(out.contains("**Bold** and"), "space after bold missing: {out}");
         assert!(out.contains("_italic_ and"), "space after italic missing: {out}");
         assert!(out.contains("and [link]"), "space before link missing: {out}");
+    }
+
+    #[test]
+    fn test_image_extraction() {
+        let html = r#"<figure typeof="mw:File/Thumb">
+            <a href="./File:Foo.jpg" class="mw-file-description">
+                <img alt="A description" src="//upload.wikimedia.org/thumb/foo.jpg" class="mw-file-element"/>
+            </a>
+            <figcaption>Caption text here.</figcaption>
+        </figure>"#;
+        let items = extract(html);
+        let imgs = images(&items);
+        assert_eq!(imgs.len(), 1);
+        assert_eq!(imgs[0].src, "https://upload.wikimedia.org/thumb/foo.jpg");
+        assert_eq!(imgs[0].alt, "A description");
+        assert_eq!(imgs[0].caption, "Caption text here.");
+    }
+
+    #[test]
+    fn test_image_no_caption() {
+        let html = r#"<figure typeof="mw:File/Frameless">
+            <a href="./File:Bar.png" class="mw-file-description">
+                <img alt="Bar" src="//upload.wikimedia.org/bar.png" class="mw-file-element"/>
+            </a>
+            <figcaption></figcaption>
+        </figure>"#;
+        let items = extract(html);
+        let imgs = images(&items);
+        assert_eq!(imgs.len(), 1);
+        assert_eq!(imgs[0].caption, "");
+    }
+
+    #[test]
+    fn test_image_section_tracking() {
+        let html = r#"<h2>History</h2>
+        <figure typeof="mw:File/Thumb">
+            <a href="./File:X.jpg"><img alt="X" src="//upload.wikimedia.org/x.jpg"/></a>
+            <figcaption>X caption</figcaption>
+        </figure>
+        <p>A paragraph.</p>"#;
+        let items = extract(html);
+        let imgs = images(&items);
+        assert_eq!(imgs.len(), 1);
+        assert_eq!(imgs[0].section, "History");
+        assert_eq!(imgs[0].section_level, 2);
+    }
+
+    #[test]
+    fn test_image_interleaved_order() {
+        let html = r#"<p>Before.</p>
+        <figure typeof="mw:File/Thumb">
+            <a href="./File:X.jpg"><img alt="X" src="//upload.wikimedia.org/x.jpg"/></a>
+            <figcaption>Caption</figcaption>
+        </figure>
+        <p>After.</p>"#;
+        let items = extract(html);
+        assert!(matches!(&items[0], ArticleItem::Paragraph(s) if s.text == "Before."));
+        assert!(matches!(&items[1], ArticleItem::Image(_)));
+        assert!(matches!(&items[2], ArticleItem::Paragraph(s) if s.text == "After."));
+    }
+
+    #[test]
+    fn test_markdown_image() {
+        let html = r#"<figure typeof="mw:File/Thumb">
+            <a href="./File:Foo.jpg"><img alt="Alt text" src="//upload.wikimedia.org/foo.jpg"/></a>
+            <figcaption>The caption.</figcaption>
+        </figure>"#;
+        let items = extract(html);
+        let out = items.format_markdown();
+        assert!(out.contains("![Alt text](https://upload.wikimedia.org/foo.jpg)"));
+        assert!(out.contains("_The caption._"));
+    }
+
+    #[test]
+    fn test_markdown_image_no_caption() {
+        let html = r#"<figure typeof="mw:File/Frameless">
+            <a href="./File:Bar.png"><img alt="Bar" src="//upload.wikimedia.org/bar.png"/></a>
+            <figcaption></figcaption>
+        </figure>"#;
+        let items = extract(html);
+        let out = items.format_markdown();
+        assert!(out.contains("![Bar](https://upload.wikimedia.org/bar.png)"));
+        // no caption line when caption is empty
+        assert!(!out.contains("__"));
+    }
+
+    #[test]
+    fn test_plain_image() {
+        let html = r#"<figure typeof="mw:File/Thumb">
+            <a href="./File:Foo.jpg"><img alt="Alt text" src="//upload.wikimedia.org/foo.jpg"/></a>
+            <figcaption>The caption.</figcaption>
+        </figure>"#;
+        let items = extract(html);
+        let out = items.format_plain();
+        assert!(out.contains("[Image: Alt text]"));
+        assert!(out.contains("The caption."));
+    }
+
+    #[test]
+    fn test_json_image() {
+        let html = r#"<h2>Section</h2>
+        <figure typeof="mw:File/Thumb">
+            <a href="./File:Foo.jpg"><img alt="Alt text" src="//upload.wikimedia.org/foo.jpg"/></a>
+            <figcaption>The caption.</figcaption>
+        </figure>
+        <p>A paragraph.</p>"#;
+        let items = extract(html);
+        let json_str = items.format_json().unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(v["sections"][0]["images"][0]["alt"], "Alt text");
+        assert_eq!(v["sections"][0]["images"][0]["src"], "https://upload.wikimedia.org/foo.jpg");
+        assert_eq!(v["sections"][0]["images"][0]["caption"], "The caption.");
     }
 }

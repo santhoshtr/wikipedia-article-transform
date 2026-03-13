@@ -113,6 +113,8 @@ pub struct WikiPage {
     parser: Parser,
     text_segments: Vec<TextSegment>,
     current_sections: Vec<SectionInfo>,
+    /// Base URL used to resolve relative hrefs, e.g. `https://en.wikipedia.org/wiki/`.
+    base_url: Option<String>,
 }
 
 impl WikiPage {
@@ -125,7 +127,44 @@ impl WikiPage {
             parser,
             text_segments: Vec::new(),
             current_sections: Vec::new(),
+            base_url: None,
         })
+    }
+
+    /// Set the base URL for resolving relative link hrefs.
+    ///
+    /// Call this before [`extract_text`] when the HTML comes from a known origin.
+    /// The `language` parameter is a Wikipedia language code (e.g. `"en"`, `"ml"`).
+    ///
+    /// ```rust
+    /// use wikipedia_article_transform::WikiPage;
+    ///
+    /// let mut page = WikiPage::new().unwrap();
+    /// page.set_base_url("en");
+    /// ```
+    pub fn set_base_url(&mut self, language: &str) {
+        self.base_url = Some(format!("https://{language}.wikipedia.org/wiki/"));
+    }
+
+    /// Resolve an href against the base URL.
+    ///
+    /// - `./Foo`           → `{base}Foo`
+    /// - `//en.wikipedia.org/wiki/Foo` → `https://en.wikipedia.org/wiki/Foo`
+    /// - already `http(s)://` → unchanged
+    /// - anything else (anchors, mw-data:, etc.) → unchanged
+    fn resolve_href(&self, href: &str) -> String {
+        if href.starts_with("http://") || href.starts_with("https://") {
+            return href.to_string();
+        }
+        if let Some(rest) = href.strip_prefix("//") {
+            return format!("https://{rest}");
+        }
+        if let Some(path) = href.strip_prefix("./") {
+            if let Some(base) = &self.base_url {
+                return format!("{base}{path}");
+            }
+        }
+        href.to_string()
     }
 
     /// Parses `html` and returns one [`TextSegment`] per paragraph.
@@ -359,10 +398,11 @@ impl WikiPage {
                                 return;
                             }
                             "a" => {
-                                let href = attributes.iter()
+                                let raw_href = attributes.iter()
                                     .find(|(k, _)| k == "href")
-                                    .map(|(_, v)| v.clone())
+                                    .map(|(_, v)| v.as_str())
                                     .unwrap_or_default();
+                                let href = self.resolve_href(raw_href);
                                 let text = self.collect_inline_text(node, source);
                                 if !text.is_empty() {
                                     self.push_inline(InlineNode::Link { text, href });
@@ -457,6 +497,7 @@ impl Default for WikiPage {
 pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<TextSegment>> {
     let html = get_page_content_html(language, title).await?;
     let mut page = WikiPage::new()?;
+    page.set_base_url(language);
     Ok(page.extract_text(&html)?)
 }
 
@@ -600,10 +641,32 @@ mod tests {
 
     #[test]
     fn test_inline_link() {
-        let segs = extract(r#"<p><a href="/wiki/X">anchor</a></p>"#);
+        let segs = extract(r#"<p><a href="./X">anchor</a></p>"#);
         assert_eq!(segs.len(), 1);
+        // No base URL set: ./X passes through unchanged
         assert!(matches!(&segs[0].content[0],
-            InlineNode::Link { text, href } if text == "anchor" && href == "/wiki/X"));
+            InlineNode::Link { text, href } if text == "anchor" && href == "./X"));
+    }
+
+    #[test]
+    fn test_inline_link_absolute() {
+        let html = r#"<p><a href="./Cryogenics">Cryogenics</a></p>"#;
+        let mut page = WikiPage::new().unwrap();
+        page.set_base_url("en");
+        let segs = page.extract_text(html).unwrap();
+        assert!(matches!(&segs[0].content[0],
+            InlineNode::Link { text, href }
+                if text == "Cryogenics"
+                && href == "https://en.wikipedia.org/wiki/Cryogenics"));
+    }
+
+    #[test]
+    fn test_resolve_href_protocol_relative() {
+        let html = r#"<p><a href="//en.wikipedia.org/wiki/Oxygen">O</a></p>"#;
+        let mut page = WikiPage::new().unwrap();
+        let segs = page.extract_text(html).unwrap();
+        assert!(matches!(&segs[0].content[0],
+            InlineNode::Link { href, .. } if href == "https://en.wikipedia.org/wiki/Oxygen"));
     }
 
     #[test]

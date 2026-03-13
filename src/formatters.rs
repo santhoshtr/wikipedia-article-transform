@@ -185,28 +185,39 @@ fn format_markdown(segments: &[TextSegment]) -> String {
         }
 
         out.push('\n');
+        let mut para = String::new();
         for node in &seg.content {
             match node {
-                InlineNode::Text(s) => out.push_str(s),
+                InlineNode::Text(s) => para.push_str(s),
                 InlineNode::Bold(s) => {
-                    out.push_str("**");
-                    out.push_str(s);
-                    out.push_str("**");
+                    if !para.ends_with(' ') && !para.is_empty() {
+                        para.push(' ');
+                    }
+                    para.push_str("**");
+                    para.push_str(s);
+                    para.push_str("** ");
                 }
                 InlineNode::Italic(s) => {
-                    out.push('_');
-                    out.push_str(s);
-                    out.push('_');
+                    if !para.ends_with(' ') && !para.is_empty() {
+                        para.push(' ');
+                    }
+                    para.push('_');
+                    para.push_str(s);
+                    para.push_str("_ ");
                 }
                 InlineNode::Link { text, href } => {
-                    out.push('[');
-                    out.push_str(text);
-                    out.push_str("](");
-                    out.push_str(href);
-                    out.push(')');
+                    if !para.ends_with(' ') && !para.is_empty() {
+                        para.push(' ');
+                    }
+                    para.push('[');
+                    para.push_str(text);
+                    para.push_str("](");
+                    para.push_str(href);
+                    para.push_str(") ");
                 }
             }
         }
+        out.push_str(para.trim_end());
         out.push('\n');
     }
 

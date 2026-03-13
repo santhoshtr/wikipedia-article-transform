@@ -706,5 +706,9 @@ mod tests {
         assert!(out.contains("**Bold**"));
         assert!(out.contains("_italic_"));
         assert!(out.contains("[link](/x)"));
+        // spaces between inline nodes must be preserved
+        assert!(out.contains("**Bold** and"), "space after bold missing: {out}");
+        assert!(out.contains("_italic_ and"), "space after italic missing: {out}");
+        assert!(out.contains("and [link]"), "space before link missing: {out}");
     }
 }

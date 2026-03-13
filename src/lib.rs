@@ -7,22 +7,23 @@
 //! # Quick start
 //!
 //! ```rust
-//! use wikipedia-article-transform::WikiPage;
+//! use wikipedia_article_transform::WikiPage;
 //!
 //! let html = r#"<html><body><p id="intro">Hello world.</p></body></html>"#;
 //! let text = WikiPage::extract_text_plain(html).unwrap();
 //! assert_eq!(text, "Hello world.");
 //! ```
 //!
-//! For richer output with section tracking and tag context, use [`WikiPage::extract_text`]:
+//! For richer output with section tracking, use [`WikiPage::extract_text`]:
 //!
 //! ```rust
-//! use wikipedia-article-transform::WikiPage;
+//! use wikipedia_article_transform::WikiPage;
 //!
 //! let html = r#"<html><body><h2>History</h2><p id="p1">Some text.</p></body></html>"#;
 //! let mut page = WikiPage::new().unwrap();
 //! let segments = page.extract_text(html).unwrap();
 //! assert_eq!(segments[0].section, "History");
+//! assert_eq!(segments[0].section_level, 2);
 //! assert_eq!(segments[0].text, "Some text.");
 //! ```
 //!
@@ -35,153 +36,23 @@
 //! ```
 
 use serde::Serialize;
-use std::{collections::HashMap, fmt};
 use tree_sitter::{Node, Parser};
 use tree_sitter_html::LANGUAGE;
 
 /// A single paragraph-level text segment extracted from a Wikipedia article.
 ///
-/// Each segment corresponds to a `<p>` block in the HTML (or any top-level text
-/// node before the first paragraph). The segment captures its text content,
-/// the full HTML tag ancestry, the MediaWiki paragraph ID, and the section path.
+/// Each segment corresponds to a `<p>` block in the HTML. It captures the paragraph
+/// text, the MediaWiki paragraph ID, the section heading path, and the heading depth.
 #[derive(Debug, Clone, Serialize)]
 pub struct TextSegment {
     /// The extracted plain text of this segment.
     pub text: String,
-    /// The chain of HTML tags from the document root down to this segment's container.
-    pub tag_path: Vec<HtmlTag>,
     /// The `id` attribute of the enclosing `<p>` element, if present.
     pub mwid: String,
     /// The section heading path, e.g. `"History - Early life"`.
     pub section: String,
-}
-
-impl TextSegment {
-    /// Returns `true` if any tag in the ancestry path has the given tag name.
-    pub fn is_in_tag(&self, tag_name: &str) -> bool {
-        self.tag_path.iter().any(|tag| tag.name == tag_name)
-    }
-
-    /// Returns `true` if any ancestor tag has the given attribute.
-    ///
-    /// If `attr_value` is `Some`, also checks that the attribute equals that value.
-    pub fn is_in_tag_with_attribute(&self, attr_name: &str, attr_value: Option<&str>) -> bool {
-        self.tag_path.iter().any(|tag| {
-            if let Some(value) = attr_value {
-                tag.get_attribute(attr_name).is_some_and(|v| v == value)
-            } else {
-                tag.has_attribute(attr_name)
-            }
-        })
-    }
-
-    /// Returns `true` if any ancestor tag has the given CSS class.
-    pub fn is_in_tag_with_class(&self, class_name: &str) -> bool {
-        self.tag_path.iter().any(|tag| tag.has_class(class_name))
-    }
-
-    /// Returns `true` if any ancestor tag has the given `id` attribute value.
-    pub fn is_in_tag_with_id(&self, id: &str) -> bool {
-        self.tag_path.iter().any(|tag| tag.has_id(id))
-    }
-
-    /// Returns the immediate parent tag of this segment, if any.
-    pub fn get_parent_tag(&self) -> Option<&HtmlTag> {
-        self.tag_path.last()
-    }
-
-    /// Returns `true` if the last N tags in the ancestry match the given CSS-like selectors.
-    ///
-    /// Selectors support `tag`, `.class`, and `#id` syntax. The selectors are matched
-    /// against the tail of `tag_path`, so `["div", "p"]` matches any segment inside
-    /// a `<p>` that is directly inside a `<div>`.
-    pub fn matches_selector_path(&self, selectors: &[&str]) -> bool {
-        if selectors.is_empty() || self.tag_path.len() < selectors.len() {
-            return false;
-        }
-        let start_idx = self.tag_path.len() - selectors.len();
-        selectors
-            .iter()
-            .enumerate()
-            .all(|(i, sel)| self.tag_path[start_idx + i].matches_selector(sel))
-    }
-}
-
-impl fmt::Display for TextSegment {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "mwid: {}\nsection: {}\ntext:\n{}\n---",
-            self.mwid, self.section, self.text
-        )
-    }
-}
-
-/// An HTML element node in the tag ancestry path.
-#[derive(Debug, Clone, Serialize)]
-pub struct HtmlTag {
-    /// The tag name, e.g. `"div"`, `"p"`, `"span"`.
-    pub name: String,
-    /// All HTML attributes on this element.
-    pub attributes: HashMap<String, String>,
-    /// Byte offset of the start of this element in the source HTML.
-    pub start_byte: usize,
-    /// Byte offset of the end of this element in the source HTML.
-    pub end_byte: usize,
-}
-
-impl HtmlTag {
-    /// Creates a new `HtmlTag` with no attributes.
-    pub fn new(name: String, start_byte: usize, end_byte: usize) -> Self {
-        Self {
-            name,
-            attributes: HashMap::new(),
-            start_byte,
-            end_byte,
-        }
-    }
-
-    /// Returns `true` if this element has the given attribute (regardless of value).
-    pub fn has_attribute(&self, name: &str) -> bool {
-        self.attributes.contains_key(name)
-    }
-
-    /// Returns the value of the given attribute, or `None` if absent.
-    pub fn get_attribute(&self, name: &str) -> Option<&str> {
-        self.attributes.get(name).map(|s| s.as_str())
-    }
-
-    /// Returns `true` if the element's `class` attribute contains the given class name.
-    pub fn has_class(&self, class_name: &str) -> bool {
-        self.get_attribute("class")
-            .is_some_and(|c| c.split_whitespace().any(|c| c == class_name))
-    }
-
-    /// Returns the `id` attribute value, or `None` if absent.
-    pub fn get_id(&self) -> Option<&str> {
-        self.get_attribute("id")
-    }
-
-    /// Returns `true` if this element's `id` attribute equals the given value.
-    pub fn has_id(&self, id: &str) -> bool {
-        self.get_attribute("id").is_some_and(|v| v == id)
-    }
-
-    /// Returns `true` if this element matches the given simple CSS selector.
-    ///
-    /// Supported selector forms:
-    /// - `"div"` — matches by tag name
-    /// - `".classname"` — matches by CSS class
-    /// - `"#idvalue"` — matches by `id` attribute
-    pub fn matches_selector(&self, selector: &str) -> bool {
-        if selector.starts_with('.') {
-            self.has_class(&selector[1..])
-        } else if selector.starts_with('#') {
-            self.has_id(&selector[1..])
-        } else {
-            self.name == selector
-        }
-    }
+    /// The heading level of the current section (1–6). 0 if before any heading.
+    pub section_level: u8,
 }
 
 #[derive(Debug, Clone)]
@@ -199,7 +70,7 @@ struct SectionInfo {
 /// # Example
 ///
 /// ```rust
-/// use wikipedia-article-transform::WikiPage;
+/// use wikipedia_article_transform::WikiPage;
 ///
 /// let mut page = WikiPage::new().unwrap();
 /// let segments = page.extract_text("<p>Hello.</p>").unwrap();
@@ -243,7 +114,7 @@ impl WikiPage {
             .parse(html, None)
             .ok_or_else(|| anyhow::anyhow!("Failed to parse HTML"))?;
         let source = html.as_bytes();
-        self.walk_and_collect(&tree.root_node(), Vec::new(), source);
+        self.walk_and_collect(&tree.root_node(), source);
         Ok(self.text_segments.clone())
     }
 
@@ -313,7 +184,14 @@ impl WikiPage {
             .join(" - ")
     }
 
-    fn walk_and_collect(&mut self, node: &Node, mut current_tag_path: Vec<HtmlTag>, source: &[u8]) {
+    fn get_current_section_level(&self) -> u8 {
+        self.current_sections
+            .last()
+            .map(|s| s.level)
+            .unwrap_or(0)
+    }
+
+    fn walk_and_collect(&mut self, node: &Node, source: &[u8]) {
         match node.kind() {
             "text" => {
                 if let Ok(text) = node.utf8_text(source) {
@@ -322,9 +200,9 @@ impl WikiPage {
                         if self.text_segments.is_empty() {
                             self.text_segments.push(TextSegment {
                                 text: String::new(),
-                                tag_path: current_tag_path.clone(),
                                 mwid: String::new(),
                                 section: self.get_current_section_string(),
+                                section_level: self.get_current_section_level(),
                             });
                         }
                         let last = self.text_segments.len() - 1;
@@ -337,8 +215,8 @@ impl WikiPage {
             }
             "script_element" | "style_element" => (),
             "element" => {
-                if let Some(html_tag) = self.parse_element(node, source) {
-                    if html_tag.name == "link" {
+                if let Some((tag_name, attributes)) = self.parse_element(node, source) {
+                    if tag_name == "link" {
                         return;
                     }
 
@@ -352,35 +230,38 @@ impl WikiPage {
                         "reflist",
                         "citation",
                     ];
-                    if EXCLUDED_CLASSES.iter().any(|c| html_tag.has_class(c)) {
+                    let class_attr = attributes.iter()
+                        .find(|(k, _)| k == "class")
+                        .map(|(_, v)| v.as_str())
+                        .unwrap_or("");
+                    if EXCLUDED_CLASSES.iter().any(|c| {
+                        class_attr.split_whitespace().any(|cls| cls == *c)
+                    }) {
                         return;
                     }
 
-                    if let Some(level) = Self::get_header_level(&html_tag.name) {
+                    if let Some(level) = Self::get_header_level(&tag_name) {
                         let header_text = self.extract_text_from_element(node, source);
                         if !header_text.is_empty() {
                             self.update_sections(level, header_text);
                         }
-                        // Do not recurse: header text is already captured above.
                         return;
-                    } else if html_tag.name == "p" {
-                        let mwid = html_tag.get_id().unwrap_or("").to_string();
-                        let mut new_tag_path = current_tag_path.clone();
-                        new_tag_path.push(html_tag);
+                    } else if tag_name == "p" {
+                        let mwid = attributes.iter()
+                            .find(|(k, _)| k == "id")
+                            .map(|(_, v)| v.clone())
+                            .unwrap_or_default();
                         self.text_segments.push(TextSegment {
                             text: String::new(),
-                            tag_path: new_tag_path.clone(),
                             mwid,
                             section: self.get_current_section_string(),
+                            section_level: self.get_current_section_level(),
                         });
-                        current_tag_path = new_tag_path;
-                    } else {
-                        current_tag_path.push(html_tag);
                     }
 
                     for i in 0..node.child_count() {
                         if let Some(child) = node.child(i as u32) {
-                            self.walk_and_collect(&child, current_tag_path.clone(), source);
+                            self.walk_and_collect(&child, source);
                         }
                     }
                 }
@@ -388,38 +269,35 @@ impl WikiPage {
             _ => {
                 for i in 0..node.child_count() {
                     if let Some(child) = node.child(i as u32) {
-                        self.walk_and_collect(&child, current_tag_path.clone(), source);
+                        self.walk_and_collect(&child, source);
                     }
                 }
             }
         }
     }
 
-    fn parse_element(&self, element_node: &Node, source: &[u8]) -> Option<HtmlTag> {
+    /// Returns `(tag_name, attributes)` for an element node, or `None` if unparseable.
+    fn parse_element(&self, element_node: &Node, source: &[u8]) -> Option<(String, Vec<(String, String)>)> {
         let start_tag = element_node
             .children(&mut element_node.walk())
             .find(|child| child.kind() == "start_tag")?;
 
-        let tag_name = start_tag
+        let tag_name_node = start_tag
             .children(&mut start_tag.walk())
             .find(|child| child.kind() == "tag_name")?;
 
-        let tag_name_str = tag_name.utf8_text(source).ok()?.to_string();
-        let mut html_tag = HtmlTag::new(
-            tag_name_str,
-            element_node.start_byte(),
-            element_node.end_byte(),
-        );
+        let tag_name = tag_name_node.utf8_text(source).ok()?.to_string();
+        let mut attributes = Vec::new();
 
         for child in start_tag.children(&mut start_tag.walk()) {
             if child.kind() == "attribute" {
-                if let Some((name, value)) = self.parse_attribute(&child, source) {
-                    html_tag.attributes.insert(name, value);
+                if let Some(pair) = self.parse_attribute(&child, source) {
+                    attributes.push(pair);
                 }
             }
         }
 
-        Some(html_tag)
+        Some((tag_name, attributes))
     }
 
     fn parse_attribute(&self, attr_node: &Node, source: &[u8]) -> Option<(String, String)> {
@@ -459,6 +337,144 @@ impl Default for WikiPage {
     }
 }
 
+/// Format a slice of [`TextSegment`]s as plain text.
+///
+/// Section headings are emitted as `#`/`##`/`###` lines (matching heading depth) when
+/// the section changes. Paragraphs are separated by blank lines. No metadata labels.
+///
+/// # Example
+///
+/// ```rust
+/// use wikipedia_article_transform::{WikiPage, format_plain};
+///
+/// let html = "<h2>History</h2><p>Para one.</p><h3>Early life</h3><p>Para two.</p>";
+/// let mut page = WikiPage::new().unwrap();
+/// let segments = page.extract_text(html).unwrap();
+/// let text = format_plain(&segments);
+/// assert!(text.contains("## History\n"));
+/// assert!(text.contains("### Early life\n"));
+/// ```
+pub fn format_plain(segments: &[TextSegment]) -> String {
+    let mut out = String::new();
+    let mut last_section = String::new();
+
+    for seg in segments {
+        let text = seg.text.trim();
+        if text.is_empty() {
+            continue;
+        }
+
+        if seg.section != last_section {
+            if !out.is_empty() {
+                out.push('\n');
+            }
+            if !seg.section.is_empty() {
+                let hashes = "#".repeat(seg.section_level.max(1) as usize);
+                // Emit only the deepest heading component
+                let heading = seg.section.rsplit(" - ").next().unwrap_or(&seg.section);
+                out.push_str(&hashes);
+                out.push(' ');
+                out.push_str(heading);
+                out.push('\n');
+            }
+            last_section = seg.section.clone();
+        }
+
+        out.push('\n');
+        out.push_str(text);
+        out.push('\n');
+    }
+
+    out
+}
+
+/// Format a slice of [`TextSegment`]s as a semantic JSON section tree.
+///
+/// The output groups paragraphs by section hierarchy:
+///
+/// ```json
+/// {
+///   "intro": ["Paragraphs before first heading..."],
+///   "sections": [
+///     {
+///       "heading": "History",
+///       "level": 2,
+///       "paragraphs": ["..."],
+///       "subsections": [
+///         { "heading": "Early life", "level": 3, "paragraphs": ["..."], "subsections": [] }
+///       ]
+///     }
+///   ]
+/// }
+/// ```
+///
+/// `mwid` is omitted — it is an internal MediaWiki detail.
+pub fn format_json(segments: &[TextSegment]) -> anyhow::Result<String> {
+    #[derive(Serialize)]
+    struct Section {
+        heading: String,
+        level: u8,
+        paragraphs: Vec<String>,
+        subsections: Vec<Section>,
+    }
+
+    #[derive(Serialize)]
+    struct ArticleTree {
+        intro: Vec<String>,
+        sections: Vec<Section>,
+    }
+
+    let mut tree = ArticleTree {
+        intro: Vec::new(),
+        sections: Vec::new(),
+    };
+
+    for seg in segments {
+        let text = seg.text.trim().to_string();
+        if text.is_empty() {
+            continue;
+        }
+
+        if seg.section.is_empty() {
+            tree.intro.push(text);
+            continue;
+        }
+
+        // Walk the heading path components to find/create the right node.
+        let parts: Vec<&str> = seg.section.split(" - ").collect();
+        let mut siblings = &mut tree.sections;
+
+        for (i, part) in parts.iter().enumerate() {
+            let level = if i == 0 {
+                // Top-level: use section_level adjusted back to root depth.
+                // section_level is the deepest heading; parts.len() tells us depth.
+                seg.section_level.saturating_sub((parts.len() - 1) as u8)
+            } else {
+                seg.section_level.saturating_sub((parts.len() - 1 - i) as u8)
+            };
+
+            let pos = siblings.iter().position(|s| s.heading == *part);
+            if pos.is_none() {
+                siblings.push(Section {
+                    heading: part.to_string(),
+                    level,
+                    paragraphs: Vec::new(),
+                    subsections: Vec::new(),
+                });
+            }
+            let idx = siblings.iter().position(|s| s.heading == *part).unwrap();
+
+            if i == parts.len() - 1 {
+                siblings[idx].paragraphs.push(text.clone());
+            } else {
+                siblings = &mut siblings[idx].subsections;
+            }
+        }
+    }
+
+    Ok(serde_json::to_string_pretty(&tree)?)
+}
+
 /// Fetch a Wikipedia article by language code and title, returning extracted text segments.
 ///
 /// Requires the `fetch` feature.
@@ -468,7 +484,7 @@ impl Default for WikiPage {
 /// ```no_run
 /// # #[cfg(feature = "fetch")]
 /// # async fn example() -> anyhow::Result<()> {
-/// let segments = wikipedia-article-transform::get_text("en", "Rust_(programming_language)").await?;
+/// let segments = wikipedia_article_transform::get_text("en", "Rust_(programming_language)").await?;
 /// for seg in &segments {
 ///     println!("{}", seg.text);
 /// }
@@ -517,6 +533,7 @@ mod tests {
         assert_eq!(segs[0].text, "Hello world.");
         assert_eq!(segs[0].mwid, "p1");
         assert_eq!(segs[0].section, "");
+        assert_eq!(segs[0].section_level, 0);
     }
 
     #[test]
@@ -534,6 +551,14 @@ mod tests {
         let segs = extract(html);
         assert_eq!(segs[0].section, "History");
         assert_eq!(segs[1].section, "History - Early life");
+    }
+
+    #[test]
+    fn test_section_level() {
+        let html = "<h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
+        let segs = extract(html);
+        assert_eq!(segs[0].section_level, 2);
+        assert_eq!(segs[1].section_level, 3);
     }
 
     #[test]
@@ -575,51 +600,6 @@ mod tests {
     }
 
     #[test]
-    fn test_is_in_tag() {
-        let segs = extract(r#"<div class="content"><p>Text.</p></div>"#);
-        assert!(!segs.is_empty());
-        assert!(segs[0].is_in_tag("div"));
-        assert!(!segs[0].is_in_tag("span"));
-    }
-
-    #[test]
-    fn test_is_in_tag_with_class() {
-        let segs = extract(r#"<div class="content mw-body"><p>Text.</p></div>"#);
-        assert!(!segs.is_empty());
-        assert!(segs[0].is_in_tag_with_class("mw-body"));
-        assert!(!segs[0].is_in_tag_with_class("sidebar"));
-    }
-
-    #[test]
-    fn test_matches_selector_path() {
-        let segs = extract(r#"<div id="main"><p id="p1">Text.</p></div>"#);
-        assert!(!segs.is_empty());
-        assert!(segs[0].matches_selector_path(&["div", "p"]));
-        assert!(!segs[0].matches_selector_path(&["section", "p"]));
-    }
-
-    #[test]
-    fn test_html_tag_selector() {
-        let tag = HtmlTag {
-            name: "div".into(),
-            attributes: [
-                ("class".into(), "foo bar".into()),
-                ("id".into(), "main".into()),
-            ]
-            .into(),
-            start_byte: 0,
-            end_byte: 10,
-        };
-        assert!(tag.matches_selector("div"));
-        assert!(tag.matches_selector(".foo"));
-        assert!(tag.matches_selector(".bar"));
-        assert!(tag.matches_selector("#main"));
-        assert!(!tag.matches_selector(".baz"));
-        assert!(!tag.matches_selector("#other"));
-        assert!(!tag.matches_selector("span"));
-    }
-
-    #[test]
     fn test_extract_text_plain() {
         let html = "<p>First paragraph.</p><p>Second paragraph.</p>";
         let text = WikiPage::extract_text_plain(html).unwrap();
@@ -634,12 +614,32 @@ mod tests {
     }
 
     #[test]
-    fn test_get_id() {
-        let tag = HtmlTag::new("p".into(), 0, 5);
-        assert_eq!(tag.get_id(), None);
+    fn test_format_plain_sections() {
+        let html = "<p>Intro.</p><h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
+        let segs = extract(html);
+        let out = format_plain(&segs);
+        assert!(out.contains("\nIntro.\n"), "intro paragraph missing");
+        assert!(out.contains("## History\n"), "h2 heading missing");
+        assert!(out.contains("\nA.\n"), "first section paragraph missing");
+        assert!(out.contains("### Early life\n"), "h3 heading missing");
+        assert!(out.contains("\nB.\n"), "subsection paragraph missing");
+        // headings appear before their paragraphs
+        assert!(out.find("## History").unwrap() < out.find("\nA.\n").unwrap());
+        assert!(out.find("### Early life").unwrap() < out.find("\nB.\n").unwrap());
+    }
 
-        let mut tag2 = HtmlTag::new("p".into(), 0, 5);
-        tag2.attributes.insert("id".into(), "mw42".into());
-        assert_eq!(tag2.get_id(), Some("mw42"));
+    #[test]
+    fn test_format_json_tree() {
+        let html = "<p>Intro.</p><h2>History</h2><p>A.</p><h3>Early life</h3><p>B.</p>";
+        let segs = extract(html);
+        let json_str = format_json(&segs).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(v["intro"][0], "Intro.");
+        assert_eq!(v["sections"][0]["heading"], "History");
+        assert_eq!(v["sections"][0]["level"], 2);
+        assert_eq!(v["sections"][0]["paragraphs"][0], "A.");
+        assert_eq!(v["sections"][0]["subsections"][0]["heading"], "Early life");
+        assert_eq!(v["sections"][0]["subsections"][0]["level"], 3);
+        assert_eq!(v["sections"][0]["subsections"][0]["paragraphs"][0], "B.");
     }
 }

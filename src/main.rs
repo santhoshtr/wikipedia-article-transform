@@ -1,8 +1,7 @@
 use anyhow::Context;
 use clap::{Parser, Subcommand, ValueEnum};
-use serde::{Deserialize, Serialize};
-use std::io::{self, BufRead, BufWriter, Write};
-use wikipedia_article_transform::{WikiPage, get_text};
+use std::io::{self, Write};
+use wikipedia_article_transform::{get_text, format_plain, format_json};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Extract plain text from Wikipedia HTML")]
@@ -22,39 +21,17 @@ enum Command {
         #[arg(short, long)]
         title: String,
         /// Output format
-        #[arg(short, long, default_value = "text")]
+        #[arg(short, long, default_value = "plain")]
         format: OutputFormat,
     },
-    /// Read line-delimited JSON from stdin, write extracted text as line-delimited JSON to stdout.
-    ///
-    /// Input:  `{"id": 123, "url": "...", "name": "...", "html": "..."}`
-    ///
-    /// Output: `{"id": 123, "url": "...", "name": "...", "text": "..."}`
-    Stdin,
 }
 
 #[derive(Debug, Clone, ValueEnum)]
 enum OutputFormat {
-    /// Human-readable text with mwid, section, and paragraph text
-    Text,
-    /// Pretty-printed JSON array of TextSegment objects
+    /// Plain text with section headings
+    Plain,
+    /// Semantic JSON with section tree
     Json,
-}
-
-#[derive(Deserialize)]
-struct InputRecord {
-    id: i64,
-    url: String,
-    name: String,
-    html: String,
-}
-
-#[derive(Serialize)]
-struct OutputRecord {
-    id: i64,
-    url: String,
-    name: String,
-    text: String,
 }
 
 #[tokio::main]
@@ -75,61 +52,14 @@ async fn main() -> anyhow::Result<()> {
             let mut handle = stdout.lock();
             match format {
                 OutputFormat::Json => {
-                    let json = serde_json::to_string_pretty(&segments)?;
+                    let json = format_json(&segments)?;
                     writeln!(handle, "{json}")?;
                 }
-                OutputFormat::Text => {
-                    for segment in &segments {
-                        writeln!(handle, "{segment}")?;
-                    }
+                OutputFormat::Plain => {
+                    let text = format_plain(&segments);
+                    writeln!(handle, "{text}")?;
                 }
             }
-        }
-
-        Command::Stdin => {
-            let stdin = io::stdin();
-            let stdout = io::stdout();
-            let mut out = BufWriter::new(stdout.lock());
-            let mut page = WikiPage::new()?;
-
-            for line in stdin.lock().lines() {
-                let line = line?;
-                let line = line.trim();
-                if line.is_empty() {
-                    continue;
-                }
-                let record: InputRecord = match serde_json::from_str(line) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        eprintln!("Skipping invalid JSON line: {e}");
-                        continue;
-                    }
-                };
-
-                let text = match page.extract_text(&record.html) {
-                    Ok(segments) => segments
-                        .iter()
-                        .map(|s| s.text.trim())
-                        .filter(|t| !t.is_empty())
-                        .collect::<Vec<_>>()
-                        .join("\n\n"),
-                    Err(e) => {
-                        eprintln!("Failed to extract text for id={}: {e}", record.id);
-                        String::new()
-                    }
-                };
-
-                let output = OutputRecord {
-                    id: record.id,
-                    url: record.url,
-                    name: record.name,
-                    text,
-                };
-                let json = serde_json::to_string(&output)?;
-                out.write_all(json.as_bytes())?;
-                out.write_all(b"\n")?;
-            }
-            out.flush()?;
         }
     }
 

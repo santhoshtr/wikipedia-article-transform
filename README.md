@@ -111,6 +111,12 @@ Install with the `fetch` feature (required for the binary):
 cargo install wikipedia-article-transform --features cli
 ```
 
+or with uv
+
+```sh
+uv tool install wikipedia-article-transform
+```
+
 **Fetch an article:**
 
 ```sh

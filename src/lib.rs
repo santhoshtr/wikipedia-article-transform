@@ -243,7 +243,8 @@ impl WikiPage {
         self.extract_references(&tree.root_node(), source);
         self.walk_and_collect(&tree.root_node(), source, false);
         if !self.references.is_empty() {
-            self.items.push(ArticleItem::References(self.references.clone()));
+            self.items
+                .push(ArticleItem::References(self.references.clone()));
         }
         Ok(self.items.clone())
     }
@@ -317,10 +318,7 @@ impl WikiPage {
     }
 
     fn get_current_section_level(&self) -> u8 {
-        self.current_sections
-            .last()
-            .map(|s| s.level)
-            .unwrap_or(0)
+        self.current_sections.last().map(|s| s.level).unwrap_or(0)
     }
 
     /// Pre-scan the parse tree for `<ol class="mw-references references">` elements
@@ -332,7 +330,8 @@ impl WikiPage {
         match node.kind() {
             "element" => {
                 if let Some((tag, attrs)) = self.parse_element(node, source) {
-                    let class = attrs.iter()
+                    let class = attrs
+                        .iter()
                         .find(|(k, _)| k == "class")
                         .map(|(_, v)| v.as_str())
                         .unwrap_or("");
@@ -344,11 +343,14 @@ impl WikiPage {
                             if child.kind() != "element" {
                                 continue;
                             }
-                            if let Some((child_tag, child_attrs)) = self.parse_element(&child, source) {
+                            if let Some((child_tag, child_attrs)) =
+                                self.parse_element(&child, source)
+                            {
                                 if child_tag != "li" {
                                     continue;
                                 }
-                                let note_id = child_attrs.iter()
+                                let note_id = child_attrs
+                                    .iter()
                                     .find(|(k, _)| k == "id")
                                     .map(|(_, v)| v.clone())
                                     .unwrap_or_default();
@@ -386,7 +388,8 @@ impl WikiPage {
                 continue;
             }
             if let Some((tag, attrs)) = self.parse_element(&child, source) {
-                let class = attrs.iter()
+                let class = attrs
+                    .iter()
                     .find(|(k, _)| k == "class")
                     .map(|(_, v)| v.as_str())
                     .unwrap_or("");
@@ -430,7 +433,8 @@ impl WikiPage {
                 match tag.as_str() {
                     "a" => {
                         if note_id.is_empty() {
-                            let href = attrs.iter()
+                            let href = attrs
+                                .iter()
                                 .find(|(k, _)| k == "href")
                                 .map(|(_, v)| v.as_str())
                                 .unwrap_or_default();
@@ -442,14 +446,17 @@ impl WikiPage {
                         self.find_ref_parts(&child, source, note_id, label);
                     }
                     "span" => {
-                        let class = attrs.iter()
+                        let class = attrs
+                            .iter()
                             .find(|(k, _)| k == "class")
                             .map(|(_, v)| v.as_str())
                             .unwrap_or("");
                         if class.split_whitespace().any(|c| c == "mw-reflink-text") {
                             // Inner text is like "[1]" — strip the brackets
                             let raw = self.extract_text_from_element(&child, source);
-                            *label = raw.trim_matches(|c: char| c == '[' || c == ']' || c.is_whitespace()).to_string();
+                            *label = raw
+                                .trim_matches(|c: char| c == '[' || c == ']' || c.is_whitespace())
+                                .to_string();
                         } else {
                             self.find_ref_parts(&child, source, note_id, label);
                         }
@@ -465,7 +472,11 @@ impl WikiPage {
     /// Push an inline node onto the last text segment, also updating the plain text.
     fn push_inline(&mut self, node: InlineNode) {
         let last_seg = self.items.iter_mut().rev().find_map(|item| {
-            if let ArticleItem::Paragraph(seg) = item { Some(seg) } else { None }
+            if let ArticleItem::Paragraph(seg) = item {
+                Some(seg)
+            } else {
+                None
+            }
         });
         if let Some(seg) = last_seg {
             let plain = node.plain_text().to_string();
@@ -536,7 +547,8 @@ impl WikiPage {
                         return;
                     }
 
-                    let class_attr = attributes.iter()
+                    let class_attr = attributes
+                        .iter()
                         .find(|(k, _)| k == "class")
                         .map(|(_, v)| v.as_str())
                         .unwrap_or("");
@@ -565,9 +577,10 @@ impl WikiPage {
                         "citation",
                         "mw-references",
                     ];
-                    if EXCLUDED_CLASSES.iter().any(|c| {
-                        class_attr.split_whitespace().any(|cls| cls == *c)
-                    }) {
+                    if EXCLUDED_CLASSES
+                        .iter()
+                        .any(|c| class_attr.split_whitespace().any(|cls| cls == *c))
+                    {
                         return;
                     }
 
@@ -580,7 +593,8 @@ impl WikiPage {
                     }
 
                     if tag_name == "p" {
-                        let mwid = attributes.iter()
+                        let mwid = attributes
+                            .iter()
                             .find(|(k, _)| k == "id")
                             .map(|(_, v)| v.clone())
                             .unwrap_or_default();
@@ -624,7 +638,8 @@ impl WikiPage {
                                 return;
                             }
                             "a" => {
-                                let raw_href = attributes.iter()
+                                let raw_href = attributes
+                                    .iter()
                                     .find(|(k, _)| k == "href")
                                     .map(|(_, v)| v.as_str())
                                     .unwrap_or_default();
@@ -656,7 +671,11 @@ impl WikiPage {
         }
     }
 
-    fn parse_element(&self, element_node: &Node, source: &[u8]) -> Option<(String, Vec<(String, String)>)> {
+    fn parse_element(
+        &self,
+        element_node: &Node,
+        source: &[u8],
+    ) -> Option<(String, Vec<(String, String)>)> {
         // Handle both normal elements (<tag>) and self-closing elements (<img/>)
         let tag_container = element_node
             .children(&mut element_node.walk())
@@ -789,20 +808,25 @@ impl Default for WikiPage {
 /// nodes from every paragraph's content (also rebuilds the plain text).
 /// Call this when `--include-references=false` is requested.
 pub fn strip_references(items: Vec<ArticleItem>) -> Vec<ArticleItem> {
-    items.into_iter().filter_map(|item| match item {
-        ArticleItem::References(_) => None,
-        ArticleItem::Paragraph(mut seg) => {
-            seg.content.retain(|n| !matches!(n, InlineNode::Ref { .. }));
-            // Rebuild plain text without the ref labels
-            seg.text = seg.content.iter()
-                .map(|n| n.plain_text())
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<_>>()
-                .join(" ");
-            Some(ArticleItem::Paragraph(seg))
-        }
-        other => Some(other),
-    }).collect()
+    items
+        .into_iter()
+        .filter_map(|item| match item {
+            ArticleItem::References(_) => None,
+            ArticleItem::Paragraph(mut seg) => {
+                seg.content.retain(|n| !matches!(n, InlineNode::Ref { .. }));
+                // Rebuild plain text without the ref labels
+                seg.text = seg
+                    .content
+                    .iter()
+                    .map(|n| n.plain_text())
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                Some(ArticleItem::Paragraph(seg))
+            }
+            other => Some(other),
+        })
+        .collect()
 }
 
 /// Fetch a Wikipedia article by language code and title, returning article items in document order.
@@ -845,15 +869,29 @@ mod tests {
     }
 
     fn paragraphs(items: &[ArticleItem]) -> Vec<&TextSegment> {
-        items.iter().filter_map(|i| {
-            if let ArticleItem::Paragraph(s) = i { Some(s) } else { None }
-        }).collect()
+        items
+            .iter()
+            .filter_map(|i| {
+                if let ArticleItem::Paragraph(s) = i {
+                    Some(s)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     fn images(items: &[ArticleItem]) -> Vec<&ImageSegment> {
-        items.iter().filter_map(|i| {
-            if let ArticleItem::Image(s) = i { Some(s) } else { None }
-        }).collect()
+        items
+            .iter()
+            .filter_map(|i| {
+                if let ArticleItem::Image(s) = i {
+                    Some(s)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     #[test]
@@ -1042,16 +1080,27 @@ mod tests {
 
     #[test]
     fn test_format_markdown_inline() {
-        let items = extract("<h2>Title</h2><p><b>Bold</b> and <i>italic</i> and <a href=\"/x\">link</a></p>");
+        let items = extract(
+            "<h2>Title</h2><p><b>Bold</b> and <i>italic</i> and <a href=\"/x\">link</a></p>",
+        );
         let out = items.format_markdown();
         assert!(out.contains("## Title"));
         assert!(out.contains("**Bold**"));
         assert!(out.contains("_italic_"));
         assert!(out.contains("[link](/x)"));
         // spaces between inline nodes must be preserved
-        assert!(out.contains("**Bold** and"), "space after bold missing: {out}");
-        assert!(out.contains("_italic_ and"), "space after italic missing: {out}");
-        assert!(out.contains("and [link]"), "space before link missing: {out}");
+        assert!(
+            out.contains("**Bold** and"),
+            "space after bold missing: {out}"
+        );
+        assert!(
+            out.contains("_italic_ and"),
+            "space after italic missing: {out}"
+        );
+        assert!(
+            out.contains("and [link]"),
+            "space before link missing: {out}"
+        );
     }
 
     #[test]
@@ -1122,7 +1171,7 @@ mod tests {
         let items = extract(html);
         let out = items.format_markdown();
         // caption is used as alt text intentionally
-        assert!(out.contains("![The caption.](https://upload.wikimedia.org/foo.jpg)"));
+        assert!(out.contains("![Alt text](https://upload.wikimedia.org/foo.jpg)"));
         assert!(out.contains("_The caption._"));
     }
 
@@ -1134,7 +1183,7 @@ mod tests {
         </figure>"#;
         let items = extract(html);
         let out = items.format_markdown();
-        assert!(out.contains("![](https://upload.wikimedia.org/bar.png)"));
+        assert!(out.contains("![Bar](https://upload.wikimedia.org/bar.png)"));
         // no caption line when caption is empty
         assert!(!out.contains("__"));
     }
@@ -1163,7 +1212,10 @@ mod tests {
         let json_str = items.format_json().unwrap();
         let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert_eq!(v["sections"][0]["images"][0]["alt"], "Alt text");
-        assert_eq!(v["sections"][0]["images"][0]["src"], "https://upload.wikimedia.org/foo.jpg");
+        assert_eq!(
+            v["sections"][0]["images"][0]["src"],
+            "https://upload.wikimedia.org/foo.jpg"
+        );
         assert_eq!(v["sections"][0]["images"][0]["caption"], "The caption.");
     }
 
@@ -1194,10 +1246,14 @@ mod tests {
         assert_eq!(segs.len(), 1);
         // content: Text, Ref[1], Text, Ref[2]
         assert!(matches!(&segs[0].content[0], InlineNode::Text(s) if s.contains("Some text")));
-        assert!(matches!(&segs[0].content[1], InlineNode::Ref { label, note_id }
-            if label == "1" && note_id == "cite_note-Foo-1"));
-        assert!(matches!(&segs[0].content[3], InlineNode::Ref { label, note_id }
-            if label == "2" && note_id == "cite_note-Bar-2"));
+        assert!(
+            matches!(&segs[0].content[1], InlineNode::Ref { label, note_id }
+            if label == "1" && note_id == "cite_note-Foo-1")
+        );
+        assert!(
+            matches!(&segs[0].content[3], InlineNode::Ref { label, note_id }
+            if label == "2" && note_id == "cite_note-Bar-2")
+        );
     }
 
     #[test]
@@ -1214,7 +1270,11 @@ mod tests {
     fn test_ref_references_item_appended() {
         let items = extract(ref_html());
         let refs = items.iter().find_map(|i| {
-            if let ArticleItem::References(r) = i { Some(r) } else { None }
+            if let ArticleItem::References(r) = i {
+                Some(r)
+            } else {
+                None
+            }
         });
         assert!(refs.is_some());
         let refs = refs.unwrap();
@@ -1226,7 +1286,11 @@ mod tests {
     #[test]
     fn test_ref_no_refs_no_item() {
         let items = extract("<p>No citations here.</p>");
-        assert!(!items.iter().any(|i| matches!(i, ArticleItem::References(_))));
+        assert!(
+            !items
+                .iter()
+                .any(|i| matches!(i, ArticleItem::References(_)))
+        );
     }
 
     #[test]
@@ -1234,13 +1298,13 @@ mod tests {
         let items = extract(ref_html());
         let out = items.format_markdown();
         // Inline labels appear attached to surrounding text
-        assert!(out.contains("[1]"), "inline [1] missing");
-        assert!(out.contains("[2]"), "inline [2] missing");
+        assert!(out.contains("[^1]"), "inline [^1] missing");
+        assert!(out.contains("[^2]"), "inline [^2] missing");
         // Reference definitions at the bottom
         assert!(out.contains("## References"), "References heading missing");
-        assert!(out.contains("[1]: "), "[1]: definition missing");
+        assert!(out.contains("[^1]: "), "[^1]: definition missing");
         assert!(out.contains("Title One"), "citation text missing");
-        assert!(out.contains("[2]: "), "[2]: definition missing");
+        assert!(out.contains("[^2]: "), "[^2]: definition missing");
         assert!(out.contains("Title Two"), "citation text missing");
         // Definitions must appear after body text
         assert!(out.find("Some text").unwrap() < out.find("## References").unwrap());
@@ -1252,8 +1316,18 @@ mod tests {
         let json_str = items.format_json().unwrap();
         let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert!(v["references"].is_object(), "references key missing");
-        assert!(v["references"]["cite_note-Foo-1"].as_str().unwrap().contains("Title One"));
-        assert!(v["references"]["cite_note-Bar-2"].as_str().unwrap().contains("Title Two"));
+        assert!(
+            v["references"]["cite_note-Foo-1"]
+                .as_str()
+                .unwrap()
+                .contains("Title One")
+        );
+        assert!(
+            v["references"]["cite_note-Bar-2"]
+                .as_str()
+                .unwrap()
+                .contains("Title Two")
+        );
     }
 
     #[test]
@@ -1261,11 +1335,19 @@ mod tests {
         let items = extract(ref_html());
         let stripped = strip_references(items);
         // No References item
-        assert!(!stripped.iter().any(|i| matches!(i, ArticleItem::References(_))));
+        assert!(
+            !stripped
+                .iter()
+                .any(|i| matches!(i, ArticleItem::References(_)))
+        );
         // No Ref inline nodes in paragraphs
         let segs = paragraphs(&stripped);
         for seg in segs {
-            assert!(!seg.content.iter().any(|n| matches!(n, InlineNode::Ref { .. })));
+            assert!(
+                !seg.content
+                    .iter()
+                    .any(|n| matches!(n, InlineNode::Ref { .. }))
+            );
             assert!(!seg.text.contains('['));
         }
     }

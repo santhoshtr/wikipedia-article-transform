@@ -36,7 +36,7 @@ Highly combustible materials that leave little [residue](https://en.wikipedia.or
 
 ### Scientific era
 
-![Among several contemporaries who had made discoveries independently from one another, Joseph Priestleywas the first to publish his findings on oxygen.](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/PriestleyFuseli.jpg/250px-PriestleyFuseli.jpg)
+![A drawing of an elderly man sitting by a table and facing parallel to the drawing. His left arm rests on a notebook, legs crossed.](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/PriestleyFuseli.jpg/250px-PriestleyFuseli.jpg)
 _Among several contemporaries who had made discoveries independently from one another, Joseph Priestleywas the first to publish his findings on oxygen._
 
 Swedish pharmacist [Carl Wilhelm Scheele](https://en.wikipedia.org/wiki/Carl_Wilhelm_Scheele) produced and described some properties of oxygen sometime around 1770–1775 but did not publish his work until a few years later because he was unable to interpret his work in the framework of the phlogiston theory.[^8][^21]Scheele had produced oxygen gas by heating [mercuric oxide](https://en.wikipedia.org/wiki/Mercuric_oxide) (HgO) and various [nitrates](https://en.wikipedia.org/wiki/Nitrate) in 1771–1772.[^22][^23][^12]After reading about Priestley's work in 1775, Scheele published in 1777, calling the gas "fire air" because it was then the only known [agent](https://en.wikipedia.org/wiki/Oxidizing_agent) to support combustion.[^24]
@@ -47,7 +47,7 @@ The French chemist [Antoine Lavoisier](https://en.wikipedia.org/wiki/Antoine_Lav
 
 ### Discrediting Philogiston theory
 
-![Antoine Lavoisierdiscredited the phlogiston theory.](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Lavoisier%2C_Antoine_Laurent_de_%281743-1794%29_CIPB1171.jpg/250px-Lavoisier%2C_Antoine_Laurent_de_%281743-1794%29_CIPB1171.jpg)
+![A drawing of a young man facing towards the viewer, but looking on the side. He wear a white curly wig, dark suit and white scarf.](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Lavoisier%2C_Antoine_Laurent_de_%281743-1794%29_CIPB1171.jpg/250px-Lavoisier%2C_Antoine_Laurent_de_%281743-1794%29_CIPB1171.jpg)
 _Antoine Lavoisierdiscredited the phlogiston theory._
 
 Lavoisier conducted the first adequate quantitative experiments on [oxidation](https://en.wikipedia.org/wiki/Oxidation) and gave the first correct explanation of how combustion works. He used these and similar experiments, which began in 1774, to discredit the phlogiston theory and to prove that the substance discovered by Priestley and Scheele was a [chemical element](https://en.wikipedia.org/wiki/Chemical_element) .[^23]
@@ -67,7 +67,7 @@ _Oxygen_ entered the English language despite opposition by English scientists a
 In 1879 the French brothers Quentin and Arthur
 Brin discovered a [commercially viable reaction](https://en.wikipedia.org/wiki/Brin_process) to create oxygen. They realized that the known reversible reaction2BaO(s) +O2(g) ↔2BaO2(s) was deactivated by the formation of barium carbonate from carbon dioxide in the air; treating air to remove the carbon dioxide allowed the reaction be reversed indefinitely. Their company used the process between 1886 and 1906, at which point the more economical [fractional distillation](https://en.wikipedia.org/wiki/Fractional_distillation) began to be used.[^29]
 
-![Robert H. Goddardand a liquid-oxygen–gasoline rocket](https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Goddard_and_Rocket.jpg/250px-Goddard_and_Rocket.jpg)
+![A metal frame structure stands on the snow near a tree. A middle-aged man wearing a coat, boots, leather gloves and a cap stands by the structure and holds it with his right hand.](https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Goddard_and_Rocket.jpg/250px-Goddard_and_Rocket.jpg)
 _Robert H. Goddardand a liquid-oxygen–gasoline rocket_
 
 By the late 19th century, scientists realized that air could be [liquefied](https://en.wikipedia.org/wiki/Liquid_air) and its components isolated by compressing and cooling it. Using a [cascade](https://en.wikipedia.org/wiki/Cascade_(chemical_engineering)) method, Swiss chemist and physicist [Raoul Pierre Pictet](https://en.wikipedia.org/wiki/Raoul_Pictet) evaporated liquid [sulfur dioxide](https://en.wikipedia.org/wiki/Sulfur_dioxide) in order to liquefy carbon dioxide, which in turn was [evaporated](https://en.wikipedia.org/wiki/Evaporation) to cool oxygen gas enough to liquefy it. On December 22, 1877, he sent a telegram to the [French Academy of Sciences](https://en.wikipedia.org/wiki/French_Academy_of_Sciences) in Paris announcing his discovery of [liquid oxygen](https://en.wikipedia.org/wiki/Liquid_oxygen) .[^30]Just two days later, French physicist [Louis Paul Cailletet](https://en.wikipedia.org/wiki/Louis_Paul_Cailletet) announced his own method of liquefying molecular oxygen.[^30]Only a few drops of the liquid were produced in each case and no meaningful analysis could be conducted. Oxygen was liquefied in a stable state for the first time on March 29, 1883, by Polish scientists [Zygmunt Wróblewski](https://en.wikipedia.org/wiki/Zygmunt_Wróblewski) and [Karol Olszewski](https://en.wikipedia.org/wiki/Karol_Olszewski) from [Jagiellonian University](https://en.wikipedia.org/wiki/Jagiellonian_University) .[^31]
@@ -105,7 +105,7 @@ The [metastable](https://en.wikipedia.org/wiki/Metastability_in_molecules) molec
 
 ### Physical properties
 
-![Liquid oxygen boiling (O 2)](https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Liquid_oxygen_in_a_beaker_4.jpg/250px-Liquid_oxygen_in_a_beaker_4.jpg)
+![A transparent beaker containing a light blue fluid with gas bubbles.](https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Liquid_oxygen_in_a_beaker_4.jpg/250px-Liquid_oxygen_in_a_beaker_4.jpg)
 _Liquid oxygen boiling (O 2)_
 
 Oxygen [dissolves](https://en.wikipedia.org/wiki/Solubility) more readily in water than nitrogen does. Water in equilibrium with air contains approximately 1 molecule of dissolvedO2for every 2 molecules ofN2(1:2), compared with an atmospheric ratio of approximately 1:4. The solubility of oxygen in water is temperature-dependent, and about twice as much (14.6mg/L) dissolves at0°C (32°F)than at20°C (68°F)(7.6mg/L).[^18][^54]
@@ -121,7 +121,7 @@ Table of thermal and physical properties of oxygen (O2) at atmospheric pressure:
 
 ### Isotopes and stellar origin
 
-![Late in a massive star's life, 16O concentrates in the O-shell, 17O in the H-shell and 18O in the He-shell.](https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Evolved_star_fusion_shells.svg/250px-Evolved_star_fusion_shells.svg.png)
+![A concentric-sphere diagram, showing, from the core to the outer shell, iron, silicon, oxygen, neon, carbon, helium and hydrogen layers.](https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Evolved_star_fusion_shells.svg/250px-Evolved_star_fusion_shells.svg.png)
 _Late in a massive star's life, 16O concentrates in the O-shell, 17O in the H-shell and 18O in the He-shell._
 
 Naturally occurring oxygen is composed of three stable [isotopes](https://en.wikipedia.org/wiki/Isotope) , [16 O](https://en.wikipedia.org/wiki/Oxygen-16) , [17 O](https://en.wikipedia.org/wiki/Oxygen-17) , and [18 O](https://en.wikipedia.org/wiki/Oxygen-18) , with16O being the most abundant (99.762% [natural abundance](https://en.wikipedia.org/wiki/Natural_abundance) ).[^64]
@@ -138,14 +138,14 @@ Earth is unusual among the planets of the [Solar System](https://en.wikipedia.or
 
 Oxygen levels in the atmosphere are trending slightly downward globally, possibly because of fossil-fuel burning.[^75]
 
-![Cold water holds more dissolved O 2.](https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/WOA09_sea-surf_O2_AYool.png/250px-WOA09_sea-surf_O2_AYool.png)
+![World map showing that the sea-surface oxygen is depleted around the equator and increases towards the poles.](https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/WOA09_sea-surf_O2_AYool.png/250px-WOA09_sea-surf_O2_AYool.png)
 _Cold water holds more dissolved O 2._
 
 Free oxygen also occurs in solution in the world's water bodies. The increased solubility ofO2at lower temperatures (see [Physical properties](https://en.wikipedia.org/wiki/Oxygen#Physical_properties) ) has important implications for ocean life, as polar oceans support a much higher density of life due to their higher oxygen content.[^76]Scientists assess this aspect of water quality by measuring the water's [biochemical oxygen demand](https://en.wikipedia.org/wiki/Biochemical_oxygen_demand) , or the amount ofO2needed to restore it to a normal concentration.[^77]Significant deoxygenation has been observed in tropical oceans. Warming oceans' waters are expected to lose oxygen over the next century and into the future for a thousand years; the possible consequences include minimal oxygen zones which are unable to support [macrofauna](https://en.wikipedia.org/wiki/Macrofauna) .[^78]
 
 ### Analysis
 
-![500 million years of climate changevs. 18O](https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Phanerozoic_Climate_Change.png/330px-Phanerozoic_Climate_Change.png)
+![Time evolution of oxygen-18 concentration on the scale of 500 million years showing many local peaks.](https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Phanerozoic_Climate_Change.png/330px-Phanerozoic_Climate_Change.png)
 _500 million years of climate changevs. 18O_
 
 [Paleoclimatologists](https://en.wikipedia.org/wiki/Paleoclimatology) measure the ratio of oxygen-18 and oxygen-16 in the [shells](https://en.wikipedia.org/wiki/Exoskeleton) and [skeletons](https://en.wikipedia.org/wiki/Skeleton) of marine organisms to determine the climate millions of years ago (see [oxygen isotope ratio cycle](https://en.wikipedia.org/wiki/Oxygen_isotope_ratio_cycle) ). [Seawater](https://en.wikipedia.org/wiki/Seawater) molecules that contain the lighter [isotope](https://en.wikipedia.org/wiki/Isotope) , oxygen-16, evaporate at a slightly faster rate than water molecules containing the 12% heavier oxygen-18, and this disparity increases at lower temperatures.[^79]During periods of lower global temperatures, snow and rain from that evaporated water tends to be higher in oxygen-16, and the seawater left behind tends to be higher in oxygen-18. Marine organisms then incorporate more oxygen-18 into their skeletons and shells than they would in a warmer climate.[^79]Paleoclimatologists also directly measure this ratio in the water molecules of [ice core](https://en.wikipedia.org/wiki/Ice_core) samples as old as hundreds of thousands of years.[^80][^81]
@@ -156,7 +156,7 @@ Oxygen presents two spectrophotometric [absorption bands](https://en.wikipedia.o
 
 ### Photosynthesis and respiration
 
-![Photosynthesis splits water to liberate O 2and fixes CO 2into sugar in what is called a Calvin cycle.](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Simple_photosynthesis_overview.svg/250px-Simple_photosynthesis_overview.svg.png)
+![A diagram of photosynthesis processes, including income of water and carbon dioxide, illumination and release of oxygen. Reactions produce ATP and NADPH in a Calvin cycle with a sugar as a by product.](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Simple_photosynthesis_overview.svg/250px-Simple_photosynthesis_overview.svg.png)
 _Photosynthesis splits water to liberate O 2and fixes CO 2into sugar in what is called a Calvin cycle._
 
 In nature, [free oxygen](https://en.wikipedia.org/wiki/Free_oxygen) is produced as a [byproduct](https://en.wikipedia.org/wiki/Byproduct) of [light-driven splitting](https://en.wikipedia.org/wiki/Photolysis) of water during [chlorophyllic](https://en.wikipedia.org/wiki/Chlorophyll) [photosynthesis](https://en.wikipedia.org/wiki/Photosynthesis) . According to some estimates, marine [photoautotrophs](https://en.wikipedia.org/wiki/Photoautotroph) such as [red](https://en.wikipedia.org/wiki/Red_algae) / [green algae](https://en.wikipedia.org/wiki/Green_algae) and [cyanobacteria](https://en.wikipedia.org/wiki/Cyanobacteria) provide about 70% of the free oxygen produced on Earth, and the rest is produced in terrestrial environments by plants.[^86]Other estimates of the oceanic contribution to atmospheric oxygen are higher, while some estimates are lower, suggesting oceans produce ~45% of Earth's atmospheric oxygen each year.[^87]
@@ -185,7 +185,7 @@ The free oxygen [partial pressure](https://en.wikipedia.org/wiki/Partial_pressur
 
 ### Build-up in the atmosphere
 
-![O 2build-up in Earth's atmosphere: 1) no O 2produced; 2) O 2produced, but absorbed in oceansseabed rock; 3) O 2starts to gas out of the oceans, but is absorbed by land surfaces and formation of ozone layer; 4–5) O 2sinks filled and the gas accumulates [100 ]](https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Oxygenation-atm.svg/500px-Oxygenation-atm.svg.png)
+![A graph showing time evolution of oxygen pressure on Earth; the pressure increases from zero to 0.2 atmospheres.](https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Oxygenation-atm.svg/500px-Oxygenation-atm.svg.png)
 _O 2build-up in Earth's atmosphere: 1) no O 2produced; 2) O 2produced, but absorbed in oceansseabed rock; 3) O 2starts to gas out of the oceans, but is absorbed by land surfaces and formation of ozone layer; 4–5) O 2sinks filled and the gas accumulates [100 ]_
 
 Before [photosynthesis](https://en.wikipedia.org/wiki/Photosynthesis) evolved, [Earth's atmosphere](https://en.wikipedia.org/wiki/Earth's_atmosphere) had little free [diatomic](https://en.wikipedia.org/wiki/Diatomic) elemental oxygen (O2).[^101][^95]Oxygen began building up in the [prebiotic atmosphere](https://en.wikipedia.org/wiki/Prebiotic_atmosphere) at approximately 2.45 Ga during the [Neoarchean](https://en.wikipedia.org/wiki/Neoarchean) - [Paleoproterozoic](https://en.wikipedia.org/wiki/Paleoproterozoic) boundary, a [paleogeological](https://en.wikipedia.org/wiki/Paleogeological) event known as the [Great Oxygenation Event](https://en.wikipedia.org/wiki/Great_Oxygenation_Event) (GOE).[^102]The concentrations of O2attained were less than 10% of today's and probably fluctuated greatly. Around 500Mya a second event known as the [Neoproterozoic Oxygenation Event](https://en.wikipedia.org/wiki/Neoproterozoic_Oxygenation_Event) lead to oxygen levels similar or even higher than the present.[^103]
@@ -202,12 +202,12 @@ estimated that oxygen on Earth will last for about one billion years.[^107][^108
 
 ## Industrial production
 
-![Hofmann electrolysis apparatusused in electrolysis of water](https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Hofmann_voltameter_fr.svg/250px-Hofmann_voltameter_fr.svg.png)
+![A drawing of three vertical pipes connected at the bottom and filled with oxygen (left pipe), water (middle) and hydrogen (right). Anode and cathode electrodes are inserted into the left and right pipes and externally connected to a battery.](https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Hofmann_voltameter_fr.svg/250px-Hofmann_voltameter_fr.svg.png)
 _Hofmann electrolysis apparatusused in electrolysis of water_
 
 Every year, one hundredmilliontonnes ofO2are extracted from air for industrial uses.[^24]The most common method of extraction is [fractional distillation](https://en.wikipedia.org/wiki/Fractional_distillation) of liquefied air, withN2 [distilling](https://en.wikipedia.org/wiki/Distillation) as a vapor whileO2is left as a liquid.[^24]The other primary method of producingO2is passing a stream of clean, dry air through one bed of a pair of identical [zeolite](https://en.wikipedia.org/wiki/Zeolite) molecular sieves, which absorbs the nitrogen and delivers a gas stream that is 90%to93%O2.[^24]Simultaneously, nitrogen gas is released from the other nitrogen-saturated zeolite bed, by reducing the chamber operating pressure and diverting part of the oxygen gas from the producer bed through it, in the reverse direction of flow. After a set cycle time the operation of the two beds is interchanged, thereby allowing for a continuous supply of gaseous oxygen to be pumped through a pipeline. This is known as [pressure swing adsorption](https://en.wikipedia.org/wiki/Pressure_swing_adsorption) . Oxygen gas is increasingly obtained by these non- [cryogenic](https://en.wikipedia.org/wiki/Cryogenics) technologies (see also the related [vacuum swing adsorption](https://en.wikipedia.org/wiki/Vacuum_swing_adsorption) ).[^113]
 
-![An experiment setup for preparation of oxygen in academic laboratories](https://upload.wikimedia.org/wikipedia/en/thumb/2/23/A_setup_for_preparation_of_Oxygen.jpg/330px-A_setup_for_preparation_of_Oxygen.jpg)
+![An experiment setup with test tubes to prepare oxygen](https://upload.wikimedia.org/wikipedia/en/thumb/2/23/A_setup_for_preparation_of_Oxygen.jpg/330px-A_setup_for_preparation_of_Oxygen.jpg)
 _An experiment setup for preparation of oxygen in academic laboratories_
 
 In academic laboratories, oxygen can be prepared by heating together potassium chlorate mixed with a small proportion of manganese dioxide.[^114]
@@ -223,7 +223,7 @@ _Oxygen and MAPP gascompressed-gas cylinders with regulators_
 
 ### Medical
 
-![An oxygen concentratorin an emphysemapatient's house](https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Home_oxygen_concentrator.jpg/250px-Home_oxygen_concentrator.jpg)
+![A gray device with a label DeVILBISS LT4000 and some text on the front panel. A green plastic pipe is running from the device.](https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Home_oxygen_concentrator.jpg/250px-Home_oxygen_concentrator.jpg)
 _An oxygen concentratorin an emphysemapatient's house_
 
 Uptake ofO2from the air is the essential purpose of [respiration](https://en.wikipedia.org/wiki/Respiration_(physiology)) , so oxygen supplementation is used in [medicine](https://en.wikipedia.org/wiki/Medicine) . Treatment not only increases oxygen levels in the patient's blood but has the secondary effect of decreasing resistance to blood flow in many types of diseased lungs, easing work load on the heart. [Oxygen therapy](https://en.wikipedia.org/wiki/Oxygen_therapy) is used to treat [emphysema](https://en.wikipedia.org/wiki/Emphysema) , [pneumonia](https://en.wikipedia.org/wiki/Pneumonia) , some heart disorders ( [congestive heart failure](https://en.wikipedia.org/wiki/Congestive_heart_failure) ), some disorders that cause increased [pulmonary artery pressure](https://en.wikipedia.org/wiki/Pulmonary_artery_pressure) , and any [disease](https://en.wikipedia.org/wiki/Disease) that impairs the body's ability to take up and use gaseous oxygen.[^115]
@@ -249,7 +249,7 @@ Other recreational uses that do not involve breathing include [pyrotechnic](http
 
 ### Industrial
 
-![Most commercially produced O 2is used to smeltand/or decarburizeiron.](https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Clabecq_JPG01.jpg/250px-Clabecq_JPG01.jpg)
+![An elderly worker in a helmet is facing his side to the viewer in an industrial hall. The hall is dark but is illuminated yellow glowing splashes of a melted substance.](https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Clabecq_JPG01.jpg/250px-Clabecq_JPG01.jpg)
 _Most commercially produced O 2is used to smeltand/or decarburizeiron._
 
 [Smelting](https://en.wikipedia.org/wiki/Smelting) of [iron ore](https://en.wikipedia.org/wiki/Iron_ore) into [steel](https://en.wikipedia.org/wiki/Steel) consumes 55% of commercially produced oxygen.[^77]In this process,O2is injected through a high-pressure lance into molten iron, which removes [sulfur](https://en.wikipedia.org/wiki/Sulfur) impurities and excess [carbon](https://en.wikipedia.org/wiki/Carbon) as the respective oxides,SO2andCO2. The reactions are [exothermic](https://en.wikipedia.org/wiki/Exothermic_reaction) , so the temperature increases to 1,700° [C](https://en.wikipedia.org/wiki/Celsius) .[^77]
@@ -260,7 +260,7 @@ Most of the remaining 20% of commercially produced oxygen is used in medical app
 
 ## Compounds
 
-![Water( H 2O) is the most familiar oxygen compound.](https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Stilles_Mineralwasser.jpg/250px-Stilles_Mineralwasser.jpg)
+![Water flowing from a bottle into a glass.](https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Stilles_Mineralwasser.jpg/250px-Stilles_Mineralwasser.jpg)
 _Water( H 2O) is the most familiar oxygen compound._
 
 The [oxidation state](https://en.wikipedia.org/wiki/Oxidation_state) of oxygen is −2 in almost all known compounds of oxygen. The oxidation state −1 is found in a few compounds such as [peroxides](https://en.wikipedia.org/wiki/Peroxide) .[^3]Compounds containing oxygen in other oxidation states are very uncommon: −1/2 ( [superoxides](https://en.wikipedia.org/wiki/Superoxide) ), −1/3 ( [ozonides](https://en.wikipedia.org/wiki/Ozonide) ), 0 ( [elemental](https://en.wikipedia.org/wiki/Allotropes_of_oxygen) , [hypofluorous acid](https://en.wikipedia.org/wiki/Hypofluorous_acid) ), +1/2 ( [dioxygenyl](https://en.wikipedia.org/wiki/Dioxygenyl) ), +1 ( [dioxygen difluoride](https://en.wikipedia.org/wiki/Dioxygen_difluoride) ), and +2 ( [oxygen difluoride](https://en.wikipedia.org/wiki/Oxygen_difluoride) ).[^136]
@@ -269,7 +269,7 @@ The [oxidation state](https://en.wikipedia.org/wiki/Oxidation_state) of oxygen i
 
 [Water](https://en.wikipedia.org/wiki/Water) (H2O) is an oxide of [hydrogen](https://en.wikipedia.org/wiki/Hydrogen) and the most familiar oxygen compound. Hydrogen atoms are [covalently bonded](https://en.wikipedia.org/wiki/Covalent_bonding) to oxygen in a water molecule but also have an additional attraction (about 23.3kJ/mol per hydrogen atom) to an adjacent oxygen atom in a separate molecule.[^137]These [hydrogen bonds](https://en.wikipedia.org/wiki/Hydrogen_bond) between water molecules hold them approximately 15% closer than what would be expected in a simple liquid with just [van der Waals forces](https://en.wikipedia.org/wiki/Van_der_Waals_force) .[^138][^g]
 
-![Oxides, such as iron oxideor rust, form when oxygen combines with other elements.](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Rust_screw.jpg/250px-Rust_screw.jpg)
+![A rusty piece of a bolt.](https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Rust_screw.jpg/250px-Rust_screw.jpg)
 _Oxides, such as iron oxideor rust, form when oxygen combines with other elements._
 
 Due to its [electronegativity](https://en.wikipedia.org/wiki/Electronegativity) , oxygen forms [chemical bonds](https://en.wikipedia.org/wiki/Chemical_bond) with almost all other elements to give corresponding [oxides](https://en.wikipedia.org/wiki/Oxide) . The surface of most metals, such as [aluminium](https://en.wikipedia.org/wiki/Aluminium) and [titanium](https://en.wikipedia.org/wiki/Titanium) , are oxidized in the presence of air and become coated with a thin film of oxide that [passivates](https://en.wikipedia.org/wiki/Passivation_(chemistry)) the metal and slows further [corrosion](https://en.wikipedia.org/wiki/Corrosion) . Many oxides of the [transition metals](https://en.wikipedia.org/wiki/Transition_metal) are [non-stoichiometric compounds](https://en.wikipedia.org/wiki/Non-stoichiometric_compound) , with slightly less metal than the [chemical formula](https://en.wikipedia.org/wiki/Chemical_formula) would show. For example, the mineral [FeO](https://en.wikipedia.org/wiki/Iron(II)_oxide) ( [wüstite](https://en.wikipedia.org/wiki/Wüstite) ) is written asFe1−xO{\displaystyle {\ce {Fe}}_{1-x}{\ce {O}}}, where _x_ is usually around 0.05.[^139]
@@ -282,7 +282,7 @@ Oxygen also acts as a [ligand](https://en.wikipedia.org/wiki/Ligand) for transit
 
 ### Organic compounds
 
-![Acetoneis an important feeder material in the chemical industry. Oxygen Carbon Hydrogen](https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Acetone-3D-vdW.png/250px-Acetone-3D-vdW.png)
+![A ball structure of a molecule. Its backbone is a zig-zag chain of three carbon atoms connected in the center to an oxygen atom and on the end to 6 hydrogens.](https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Acetone-3D-vdW.png/250px-Acetone-3D-vdW.png)
 _Acetoneis an important feeder material in the chemical industry. Oxygen Carbon Hydrogen_
 
 Among the most important classes of organic compounds that contain oxygen are (where "R" is an organic group): [alcohols](https://en.wikipedia.org/wiki/Alcohol_(chemistry)) (R-OH); [ethers](https://en.wikipedia.org/wiki/Ether) (R-O-R); [ketones](https://en.wikipedia.org/wiki/Ketone) (R-CO-R); [aldehydes](https://en.wikipedia.org/wiki/Aldehyde) (R-CO-H); [carboxylic acids](https://en.wikipedia.org/wiki/Carboxylic_acid) (R-COOH); [esters](https://en.wikipedia.org/wiki/Ester) (R-COO-R); [acid anhydrides](https://en.wikipedia.org/wiki/Organic_acid_anhydride) (R-CO-O-CO-R); and [amides](https://en.wikipedia.org/wiki/Amide) (R-CO-NR2). There are many important organic [solvents](https://en.wikipedia.org/wiki/Solvent) that contain oxygen, including: [acetone](https://en.wikipedia.org/wiki/Acetone) , [methanol](https://en.wikipedia.org/wiki/Methanol) , [ethanol](https://en.wikipedia.org/wiki/Ethanol) , [isopropanol](https://en.wikipedia.org/wiki/Isopropyl_alcohol) , [furan](https://en.wikipedia.org/wiki/Furan) , [THF](https://en.wikipedia.org/wiki/Tetrahydrofuran) , [diethyl ether](https://en.wikipedia.org/wiki/Diethyl_ether) , [dioxane](https://en.wikipedia.org/wiki/1,4-Dioxane) , [ethyl acetate](https://en.wikipedia.org/wiki/Ethyl_acetate) , [DMF](https://en.wikipedia.org/wiki/Dimethylformamide) , [DMSO](https://en.wikipedia.org/wiki/Dimethyl_sulfoxide) , [acetic acid](https://en.wikipedia.org/wiki/Acetic_acid) , and [formic acid](https://en.wikipedia.org/wiki/Formic_acid) . Acetone ((CH3)2CO) and [phenol](https://en.wikipedia.org/wiki/Phenol) (C6H5OH) are used as feeder materials in the synthesis of many different substances. Other important organic compounds that contain oxygen are: [glycerol](https://en.wikipedia.org/wiki/Glycerol) , [formaldehyde](https://en.wikipedia.org/wiki/Formaldehyde) , [glutaraldehyde](https://en.wikipedia.org/wiki/Glutaraldehyde) , [citric acid](https://en.wikipedia.org/wiki/Citric_acid) , [acetic anhydride](https://en.wikipedia.org/wiki/Acetic_anhydride) , and [acetamide](https://en.wikipedia.org/wiki/Acetamide) . [Epoxides](https://en.wikipedia.org/wiki/Epoxide) are ethers in which the oxygen atom is part of a ring of three atoms. The element is similarly found in almost all [biomolecules](https://en.wikipedia.org/wiki/Biomolecule) that are important to (or generated by) life.[^144]Oxygen reacts spontaneously with many [organic](https://en.wikipedia.org/wiki/Organic_chemistry) compounds at or below room temperature in a process called [autoxidation](https://en.wikipedia.org/wiki/Autoxidation) .[^145]Most of the [organic compounds](https://en.wikipedia.org/wiki/Organic_compound) that contain oxygen are not made by direct action ofO2. Organic compounds important in industry and commerce that are made by direct oxidation of a precursor include [ethylene oxide](https://en.wikipedia.org/wiki/Ethylene_oxide) and [peracetic acid](https://en.wikipedia.org/wiki/Peracetic_acid) .[^141]
@@ -293,7 +293,7 @@ The [NFPA 704](https://en.wikipedia.org/wiki/NFPA_704) standard rates compressed
 
 ### Toxicity
 
-![Main symptoms of oxygen toxicity [147 ]](https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Symptoms_of_oxygen_toxicity.png/500px-Symptoms_of_oxygen_toxicity.png)
+![A diagram showing a male torso and listing symptoms of oxygen toxicity: Eyes – visual field loss, nearsightedness, cataract formation, bleeding, fibrosis; Head – seizures; Muscles – twitching; Respiratory system – jerky breathing, irritation, coughing, pain, shortness of breath, tracheobronchitis, acute respiratory distress syndrome.](https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Symptoms_of_oxygen_toxicity.png/500px-Symptoms_of_oxygen_toxicity.png)
 _Main symptoms of oxygen toxicity [147 ]_
 
 Oxygen gas (O2) can be [toxic](https://en.wikipedia.org/wiki/Oxygen_toxicity) at elevated [partial pressures](https://en.wikipedia.org/wiki/Partial_pressure) , leading to [convulsions](https://en.wikipedia.org/wiki/Convulsion) and other health problems.[^130][^h][^148]Oxygen toxicity usually begins to occur at partial pressures more than 50 kilo [pascals](https://en.wikipedia.org/wiki/Pascal_(unit)) (kPa), equal to about 50% oxygen composition at standard pressure or 2.5 times the normal sea-levelO2partial pressure of about 21kPa. This is not a problem except for patients on [mechanical ventilators](https://en.wikipedia.org/wiki/Mechanical_ventilator) , since gas supplied through [oxygen masks](https://en.wikipedia.org/wiki/Oxygen_mask) in medical applications is typically composed of only 30–50%O2by volume (about 30kPa at standard pressure).[^18]
@@ -306,7 +306,7 @@ Oxygen toxicity to the lungs and [central nervous system](https://en.wikipedia.o
 
 ### Combustion and other hazards
 
-![The interior of the Apollo 1Command Module. Pure O 2at higher than normal pressure and a spark led to a fire and the loss of the Apollo 1 crew.](https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Apollo_1_fire.jpg/250px-Apollo_1_fire.jpg)
+![The inside of a small spaceship, charred and apparently destroyed.](https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Apollo_1_fire.jpg/250px-Apollo_1_fire.jpg)
 _The interior of the Apollo 1Command Module. Pure O 2at higher than normal pressure and a spark led to a fire and the loss of the Apollo 1 crew._
 
 Unless non-flammable containers are used or all sources of ignition are eliminated, oxygen rich environments are extremely hazardous. Many materials including most metals burn faster in oxygen rich environments and ignite at lower temperatures.[^155]ConcentratedO2will allow combustion to proceed rapidly and energetically.[^38]Steel pipes and storage vessels used to store and transmit both gaseous and [liquid oxygen](https://en.wikipedia.org/wiki/Liquid_oxygen) will act as a fuel; and therefore the design and manufacture ofO2systems requires special training to ensure that ignition sources are minimized.[^38]

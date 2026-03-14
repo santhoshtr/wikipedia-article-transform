@@ -305,11 +305,7 @@ fn format_markdown(items: &[ArticleItem]) -> String {
                 emit_section_heading(&mut out, &img.section, img.section_level, &mut last_section);
                 out.push('\n');
                 out.push_str("![");
-                out.push_str(if img.alt.is_empty() {
-                    &img.alt
-                } else {
-                    &img.caption
-                });
+                out.push_str(&img.alt);
                 out.push_str("](");
                 out.push_str(&img.src);
                 out.push(')');

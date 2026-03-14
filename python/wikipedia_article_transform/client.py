@@ -4,7 +4,7 @@ import urllib.error
 import urllib.request
 
 
-USER_AGENT = "wikipedia-article-transform/0.1 (https://github.com/smc/wikisentences)"
+USER_AGENT = "wikipedia-article-transform/0.1 (https://github.com/santhoshtr/wikipedia-article-transform)"
 
 
 def fetch_article_html(language: str, title: str, timeout: float = 20.0) -> str:

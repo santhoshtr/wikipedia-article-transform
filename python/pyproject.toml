@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/smc/wikisentences"
+Repository = "https://github.com/santhoshtr/wikipedia-article-transform"
 
 [project.scripts]
 wiki-html-text-extractor = "wikipedia_article_transform.cli:main"

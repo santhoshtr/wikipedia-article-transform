@@ -848,7 +848,7 @@ async fn get_page_content_html(language: &str, title: &str) -> anyhow::Result<St
         .get(&url)
         .header(
             "User-Agent",
-            "wikipedia-article-transform/0.1 (https://github.com/smc/wikisentences)",
+            "wikipedia-article-transform/0.1 (https://github.com/santhoshtr/wikipedia-article-transform)",
         )
         .send()
         .await?;

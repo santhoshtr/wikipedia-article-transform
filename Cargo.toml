@@ -1,6 +1,6 @@
 [package]
 name = "wikipedia-article-transform"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Transform Wikipedia articles in html to plaintext and markdown formats"
 license = "MIT"

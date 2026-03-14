@@ -832,7 +832,7 @@ pub fn strip_references(items: Vec<ArticleItem>) -> Vec<ArticleItem> {
 /// Fetch a Wikipedia article by language code and title, returning article items in document order.
 ///
 /// Requires the `fetch` feature.
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", feature = "web"))]
 pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<ArticleItem>> {
     let html = get_page_content_html(language, title).await?;
     let mut page = WikiPage::new()?;
@@ -840,7 +840,7 @@ pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<Article
     Ok(page.extract_text(&html)?)
 }
 
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", feature = "web"))]
 async fn get_page_content_html(language: &str, title: &str) -> anyhow::Result<String> {
     let url = format!("https://{language}.wikipedia.org/api/rest_v1/page/html/{title}?stash=false");
     let client = reqwest::Client::new();

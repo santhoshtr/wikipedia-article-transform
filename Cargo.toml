@@ -12,6 +12,7 @@ categories = ["text-processing", "parsing"]
 [features]
 default = []
 cli = ["dep:clap", "dep:reqwest", "dep:tokio"]
+web = ["dep:actix-web", "dep:reqwest", "dep:tokio"]
 
 [dependencies]
 tree-sitter-html = "0.23.2"
@@ -36,7 +37,16 @@ version = "1"
 optional = true
 features = ["rt-multi-thread", "macros"]
 
+[dependencies.actix-web]
+version = "4"
+optional = true
+
 [[bin]]
 name = "wiki-html-text-extractor"
 path = "src/main.rs"
 required-features = ["cli"]
+
+[[bin]]
+name = "wiki-html-api"
+path = "src/web.rs"
+required-features = ["web"]

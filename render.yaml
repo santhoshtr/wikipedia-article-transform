@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: wiki-html-transform-api
+    runtime: rust
+    plan: free
+    branch: main
+    autoDeploy: true
+    buildCommand: cargo build --release --features web --bin wiki-html-api
+    startCommand: ./target/release/wiki-html-api
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 10000

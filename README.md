@@ -131,6 +131,33 @@ wiki-html-text-extractor fetch --language ml --title "കേരളം" --format 
 wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format markdown
 ```
 
+## Web API (`web` feature)
+
+Run the HTTP API server:
+
+```sh
+cargo run --features web --bin wiki-html-api
+```
+
+Routes:
+
+```text
+GET /healthz
+GET /{language}/{title}.md
+GET /{language}/{title}.txt
+GET /{language}/{title}.json
+```
+
+Examples:
+
+```sh
+curl "http://localhost:10000/en/Oxygen.md"
+curl "http://localhost:10000/en/Oxygen.txt"
+curl "http://localhost:10000/en/Oxygen.json"
+```
+
+The server binds to `0.0.0.0:$PORT` (`PORT` defaults to `10000`) and sets output-specific content types.
+
 ## JSON output shape
 
 ```json
@@ -174,6 +201,7 @@ The following are excluded from extracted text:
 | Feature | Default | Description |
 |---|---|---|
 | `cli` | no | Enables `get_text()` and the CLI binary (adds `reqwest` + `tokio`) |
+| `web` | no | Enables the Actix API server binary (`wiki-html-api`) |
 
 ## License
 

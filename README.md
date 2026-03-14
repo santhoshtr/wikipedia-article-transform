@@ -233,6 +233,15 @@ The following are excluded from extracted text:
 | `cli` | no | Enables `get_text()` and the CLI binary (adds `reqwest` + `tokio`) |
 | `web` | no | Enables the Actix API server binary (`wikipedia-article-transform-web`) |
 
+## Agent Skills
+
+This tool is also available as an agentic skill. You may install it with:
+
+```
+npx skills add https://github.com/santhoshtr/wikipedia-article-transform
+```
+
+
 ## License
 
 MIT

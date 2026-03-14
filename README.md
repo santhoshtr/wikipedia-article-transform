@@ -1,5 +1,8 @@
 # wikipedia-article-transform
 
+[![Cargo](https://img.shields.io/crates/v/wikipedia-article-transform.svg)](https://crates.io/crates/wikipedia-article-transform)
+[![PyPI](https://img.shields.io/pypi/v/wikipedia-article-transform.svg)](https://pypi.org/project/wikipedia-article-transform/)
+
 Extract plain text from Wikipedia article HTML using [tree-sitter](https://tree-sitter.github.io/).
 
 Parses the full HTML structure of a Wikipedia article and returns clean prose text — skipping

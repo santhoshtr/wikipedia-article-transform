@@ -1069,13 +1069,24 @@ mod tests {
         let items = extract(html);
         let json_str = items.format_json().unwrap();
         let v: serde_json::Value = serde_json::from_str(&json_str).unwrap();
-        assert_eq!(v["intro"][0], "Intro.");
+        assert_eq!(v["intro"][0]["text"], "Intro.");
+        assert_eq!(v["intro"][0]["citations"].as_array().unwrap().len(), 0);
         assert_eq!(v["sections"][0]["heading"], "History");
         assert_eq!(v["sections"][0]["level"], 2);
-        assert_eq!(v["sections"][0]["paragraphs"][0], "A.");
+        assert_eq!(v["sections"][0]["paragraphs"][0]["text"], "A.");
+        assert_eq!(
+            v["sections"][0]["paragraphs"][0]["citations"]
+                .as_array()
+                .unwrap()
+                .len(),
+            0
+        );
         assert_eq!(v["sections"][0]["subsections"][0]["heading"], "Early life");
         assert_eq!(v["sections"][0]["subsections"][0]["level"], 3);
-        assert_eq!(v["sections"][0]["subsections"][0]["paragraphs"][0], "B.");
+        assert_eq!(
+            v["sections"][0]["subsections"][0]["paragraphs"][0]["text"],
+            "B."
+        );
     }
 
     #[test]
@@ -1328,6 +1339,15 @@ mod tests {
                 .unwrap()
                 .contains("Title Two")
         );
+
+        // Paragraph-level citations are preserved and resolved
+        let para = &v["intro"][0];
+        let citations = para["citations"].as_array().unwrap();
+        assert_eq!(citations.len(), 2);
+        assert_eq!(citations[0]["label"], "1");
+        assert!(citations[0]["text"].as_str().unwrap().contains("Title One"));
+        assert_eq!(citations[1]["label"], "2");
+        assert!(citations[1]["text"].as_str().unwrap().contains("Title Two"));
     }
 
     #[test]

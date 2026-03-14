@@ -61,7 +61,8 @@ use wikipedia_article_transform::ArticleFormat;
 // Plain text with # heading lines
 let plain = segments.format_plain();
 
-// Semantic JSON: { "intro": [...], "sections": [{ "heading": "...", "level": 2, ... }] }
+// Semantic JSON with per-paragraph citations:
+// { "intro": [{ "text": "...", "citations": [{ "label": "1", "text": "..." }] }], "sections": [...] }
 let json = segments.format_json()?;
 
 // Markdown with **bold**, _italic_, [links](href)
@@ -171,22 +172,42 @@ The server binds to `0.0.0.0:$PORT` (`PORT` defaults to `10000`) and sets output
 
 ```json
 {
-  "intro": ["Paragraphs before the first heading..."],
+  "intro": [
+    {
+      "text": "Paragraphs before the first heading...",
+      "citations": []
+    }
+  ],
   "sections": [
     {
       "heading": "Safety and precautions",
       "level": 2,
-      "paragraphs": ["Overview text..."],
+      "paragraphs": [
+        {
+          "text": "Overview text...",
+          "citations": [
+            { "label": "3", "text": "Reference text..." }
+          ]
+        }
+      ],
       "subsections": [
         {
           "heading": "Combustion and other hazards",
           "level": 3,
-          "paragraphs": ["Liquid oxygen spills..."],
+          "paragraphs": [
+            {
+              "text": "Liquid oxygen spills...",
+              "citations": []
+            }
+          ],
           "subsections": []
         }
       ]
     }
-  ]
+  ],
+  "references": {
+    "cite_note-Example-3": "Reference text..."
+  }
 }
 ```
 

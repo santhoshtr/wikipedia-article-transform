@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use crate::{ArticleItem, ImageSegment, InlineNode};
+use crate::{ArticleItem, ImageSegment, InlineNode, TextSegment};
 use serde::Serialize;
 
 /// Output formatting for a collection of [`ArticleItem`]s.
@@ -23,8 +23,8 @@ pub trait ArticleFormat {
     /// Structure:
     /// ```json
     /// {
-    ///   "intro": ["..."], "intro_images": [...],
-    ///   "sections": [{"heading":"...","level":2,"paragraphs":[...],"images":[...],"subsections":[...]}],
+    ///   "intro": [{"text":"...","citations":[]}], "intro_images": [...],
+    ///   "sections": [{"heading":"...","level":2,"paragraphs":[{"text":"...","citations":[]}],"images":[...],"subsections":[...]}],
     ///   "references": {"cite_note-Foo-1": "Full citation text..."}
     /// }
     /// ```
@@ -122,6 +122,18 @@ fn format_plain(items: &[ArticleItem]) -> String {
 
 fn format_json(items: &[ArticleItem]) -> anyhow::Result<String> {
     #[derive(Serialize)]
+    struct CitationEntry {
+        label: String,
+        text: String,
+    }
+
+    #[derive(Serialize)]
+    struct ParagraphEntry {
+        text: String,
+        citations: Vec<CitationEntry>,
+    }
+
+    #[derive(Serialize)]
     struct ImageEntry {
         src: String,
         alt: String,
@@ -142,35 +154,72 @@ fn format_json(items: &[ArticleItem]) -> anyhow::Result<String> {
     struct Section {
         heading: String,
         level: u8,
-        paragraphs: Vec<String>,
+        paragraphs: Vec<ParagraphEntry>,
         images: Vec<ImageEntry>,
         subsections: Vec<Section>,
     }
 
     #[derive(Serialize)]
     struct ArticleTree {
-        intro: Vec<String>,
+        intro: Vec<ParagraphEntry>,
         intro_images: Vec<ImageEntry>,
         sections: Vec<Section>,
         references: HashMap<String, String>,
     }
 
+    fn paragraph_from_segment(
+        seg: &TextSegment,
+        references: &HashMap<String, String>,
+    ) -> Option<ParagraphEntry> {
+        let text = seg.text.trim().to_string();
+        if text.is_empty() {
+            return None;
+        }
+
+        let mut citations = Vec::new();
+        let mut seen_note_ids: Vec<&str> = Vec::new();
+        for node in &seg.content {
+            if let InlineNode::Ref { label, note_id } = node {
+                if seen_note_ids.iter().any(|seen| *seen == note_id) {
+                    continue;
+                }
+                seen_note_ids.push(note_id);
+                citations.push(CitationEntry {
+                    label: label.clone(),
+                    text: references.get(note_id).cloned().unwrap_or_default(),
+                });
+            }
+        }
+
+        Some(ParagraphEntry { text, citations })
+    }
+
+    let references = items
+        .iter()
+        .find_map(|item| {
+            if let ArticleItem::References(refs) = item {
+                Some(refs.clone())
+            } else {
+                None
+            }
+        })
+        .unwrap_or_default();
+
     let mut tree = ArticleTree {
         intro: Vec::new(),
         intro_images: Vec::new(),
         sections: Vec::new(),
-        references: HashMap::new(),
+        references: references.clone(),
     };
 
     for item in items {
         match item {
             ArticleItem::Paragraph(seg) => {
-                let text = seg.text.trim().to_string();
-                if text.is_empty() {
+                let Some(paragraph) = paragraph_from_segment(seg, &references) else {
                     continue;
-                }
+                };
                 if seg.section.is_empty() {
-                    tree.intro.push(text);
+                    tree.intro.push(paragraph);
                     continue;
                 }
                 let parts: Vec<&str> = seg.section.split(" - ").collect();
@@ -189,7 +238,7 @@ fn format_json(items: &[ArticleItem]) -> anyhow::Result<String> {
                     }
                     let idx = siblings.iter().position(|s| s.heading == *part).unwrap();
                     if i == parts.len() - 1 {
-                        siblings[idx].paragraphs.push(text.clone());
+                        siblings[idx].paragraphs.push(paragraph);
                         break;
                     } else {
                         siblings = &mut siblings[idx].subsections;
@@ -225,9 +274,7 @@ fn format_json(items: &[ArticleItem]) -> anyhow::Result<String> {
                     }
                 }
             }
-            ArticleItem::References(refs) => {
-                tree.references = refs.clone();
-            }
+            ArticleItem::References(_) => {}
         }
     }
 

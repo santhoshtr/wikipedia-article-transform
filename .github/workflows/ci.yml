@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run Rust tests (core)
+        run: cargo test
+      - name: Run Rust tests (cli feature)
+        run: cargo test --features cli
+
+  python-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install maturin
+        run: python -m pip install --upgrade maturin
+      - name: Build Python wheel
+        run: maturin build --release --manifest-path python/Cargo.toml

@@ -81,6 +81,25 @@ let segments = get_text("en", "Rust_(programming_language)").await?;
 println!("{}", segments.format_markdown());
 ```
 
+### Python bindings
+
+Build locally with `maturin`:
+
+```sh
+cd python
+pip install maturin
+maturin develop --release
+```
+
+Use in Python:
+
+```python
+from wikipedia_article_transform import fetch_article_html, extract
+
+html = fetch_article_html("en", "Rust_(programming_language)")
+print(extract(html, format="markdown", language="en"))
+```
+
 ## CLI
 
 Install with the `fetch` feature (required for the binary):
@@ -99,6 +118,16 @@ wiki-html-text-extractor fetch --language en --title "Rust_(programming_language
 wiki-html-text-extractor fetch --language ml --title "കേരളം" --format json
 
 # Markdown with inline formatting
+wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format markdown
+```
+
+### Python CLI
+
+After installing the Python package, use the same command shape:
+
+```sh
+wiki-html-text-extractor fetch --language en --title "Rust_(programming_language)"
+wiki-html-text-extractor fetch --language ml --title "കേരളം" --format json
 wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format markdown
 ```
 

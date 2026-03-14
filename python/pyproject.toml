@@ -1,0 +1,30 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "wikipedia-article-transform"
+version = "0.1.0"
+description = "Extract clean text from Wikipedia article HTML using Rust core parser"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Santhosh Thottingal" }]
+keywords = ["wikipedia", "html", "text-extraction", "rust", "pyo3"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Repository = "https://github.com/smc/wikisentences"
+
+[project.scripts]
+wiki-html-text-extractor = "wikipedia_article_transform.cli:main"
+
+[tool.maturin]
+module-name = "wikipedia_article_transform._native"
+python-source = "."
+features = []

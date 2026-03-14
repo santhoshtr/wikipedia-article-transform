@@ -42,11 +42,11 @@ version = "4"
 optional = true
 
 [[bin]]
-name = "wiki-html-text-extractor"
+name = "wikipedia-article-transform"
 path = "src/main.rs"
 required-features = ["cli"]
 
 [[bin]]
-name = "wiki-html-api"
+name = "wikipedia-article-transform-web"
 path = "src/web.rs"
 required-features = ["web"]

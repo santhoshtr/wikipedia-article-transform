@@ -22,7 +22,7 @@ classifiers = [
 Repository = "https://github.com/santhoshtr/wikipedia-article-transform"
 
 [project.scripts]
-wiki-html-text-extractor = "wikipedia_article_transform.cli:main"
+wikipedia-article-transform = "wikipedia_article_transform.cli:main"
 
 [tool.maturin]
 module-name = "wikipedia_article_transform._native"

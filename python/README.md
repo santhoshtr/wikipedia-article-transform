@@ -22,7 +22,7 @@ print(text)
 ## CLI usage
 
 ```sh
-wiki-html-text-extractor fetch --language en --title "Rust_(programming_language)"
-wiki-html-text-extractor fetch --language ml --title "കേരളം" --format json
-wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format markdown
+wikipedia-article-transform fetch --language en --title "Rust_(programming_language)"
+wikipedia-article-transform fetch --language ml --title "കേരളം" --format json
+wikipedia-article-transform fetch --language en --title "Liquid_oxygen" --format markdown
 ```

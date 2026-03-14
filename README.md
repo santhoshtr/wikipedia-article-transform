@@ -112,13 +112,13 @@ cargo install wikipedia-article-transform --features cli
 
 ```sh
 # Plain text (default)
-wiki-html-text-extractor fetch --language en --title "Rust_(programming_language)"
+wikipedia-article-transform fetch --language en --title "Rust_(programming_language)"
 
 # Semantic JSON section tree
-wiki-html-text-extractor fetch --language ml --title "കേരളം" --format json
+wikipedia-article-transform fetch --language ml --title "കേരളം" --format json
 
 # Markdown with inline formatting
-wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format markdown
+wikipedia-article-transform fetch --language en --title "Liquid_oxygen" --format markdown
 ```
 
 ### Python CLI
@@ -126,9 +126,9 @@ wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format ma
 After installing the Python package, use the same command shape:
 
 ```sh
-wiki-html-text-extractor fetch --language en --title "Rust_(programming_language)"
-wiki-html-text-extractor fetch --language ml --title "കേരളം" --format json
-wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format markdown
+wikipedia-article-transform fetch --language en --title "Rust_(programming_language)"
+wikipedia-article-transform fetch --language ml --title "കേരളം" --format json
+wikipedia-article-transform fetch --language en --title "Liquid_oxygen" --format markdown
 ```
 
 ## Web API (`web` feature)
@@ -136,7 +136,7 @@ wiki-html-text-extractor fetch --language en --title "Liquid_oxygen" --format ma
 Run the HTTP API server:
 
 ```sh
-cargo run --features web --bin wiki-html-api
+cargo run --features web --bin wikipedia-article-transform-web
 ```
 
 Routes:
@@ -201,7 +201,7 @@ The following are excluded from extracted text:
 | Feature | Default | Description |
 |---|---|---|
 | `cli` | no | Enables `get_text()` and the CLI binary (adds `reqwest` + `tokio`) |
-| `web` | no | Enables the Actix API server binary (`wiki-html-api`) |
+| `web` | no | Enables the Actix API server binary (`wikipedia-article-transform-web`) |
 
 ## License
 

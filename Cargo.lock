@@ -2260,7 +2260,7 @@ dependencies = [
 
 [[package]]
 name = "wikipedia-article-transform"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "actix-web",
  "anyhow",

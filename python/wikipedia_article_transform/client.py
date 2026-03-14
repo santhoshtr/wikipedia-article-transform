@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
@@ -8,7 +9,9 @@ USER_AGENT = "wikipedia-article-transform/0.1 (https://github.com/santhoshtr/wik
 
 
 def fetch_article_html(language: str, title: str, timeout: float = 20.0) -> str:
-    url = f"https://{language}.wikipedia.org/api/rest_v1/page/html/{title}?stash=false"
+    normalized_title = "_".join(title.split())
+    encoded_title = urllib.parse.quote(normalized_title, safe="()_:")
+    url = f"https://{language}.wikipedia.org/api/rest_v1/page/html/{encoded_title}?stash=false"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310

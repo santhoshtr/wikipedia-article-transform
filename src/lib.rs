@@ -842,7 +842,10 @@ pub async fn get_text(language: &str, title: &str) -> anyhow::Result<Vec<Article
 
 #[cfg(any(feature = "cli", feature = "web"))]
 async fn get_page_content_html(language: &str, title: &str) -> anyhow::Result<String> {
-    let url = format!("https://{language}.wikipedia.org/api/rest_v1/page/html/{title}?stash=false");
+    let normalized_title = normalize_title(title);
+    let url = format!(
+        "https://{language}.wikipedia.org/api/rest_v1/page/html/{normalized_title}?stash=false"
+    );
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
@@ -858,9 +861,22 @@ async fn get_page_content_html(language: &str, title: &str) -> anyhow::Result<St
     Ok(response.text().await?)
 }
 
+#[cfg(any(feature = "cli", feature = "web"))]
+fn normalize_title(title: &str) -> String {
+    title.split_whitespace().collect::<Vec<_>>().join("_")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(any(feature = "cli", feature = "web"))]
+    #[test]
+    fn test_normalize_title_replaces_whitespace_with_underscore() {
+        assert_eq!(normalize_title("Marie Curie"), "Marie_Curie");
+        assert_eq!(normalize_title("  Marie   Curie  "), "Marie_Curie");
+        assert_eq!(normalize_title("Ada\tLovelace"), "Ada_Lovelace");
+    }
 
     fn extract(html: &str) -> Vec<ArticleItem> {
         WikiPage::extract_text_plain(html).unwrap();

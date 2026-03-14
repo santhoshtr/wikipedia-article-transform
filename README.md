@@ -129,6 +129,9 @@ wikipedia-article-transform fetch --language ml --title "കേരളം" --form
 
 # Markdown with inline formatting
 wikipedia-article-transform fetch --language en --title "Liquid_oxygen" --format markdown
+
+# Titles with spaces are accepted (normalized internally)
+wikipedia-article-transform fetch --language en --title "Marie Curie" --format json
 ```
 
 ### Python CLI
